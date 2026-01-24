@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateMenuDescription, generateProductImage } from '../services/geminiService';
-import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink } from 'lucide-react';
 import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig } from '../types';
 import { generatePixString } from '../utils/pix';
 
@@ -11,6 +11,9 @@ declare global {
     L: any;
   }
 }
+
+// Simple notification sound (Base64 MP3 beep)
+const NOTIFICATION_SOUND = 'data:audio/mp3;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAbXA0MgBUWFZYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFZYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzb21tcDQyAFRTU0UAAAAPAAADTGF2ZjU3LjU2LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAA0AAAAAAABAAA0AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAAAAAA0AAAAAAABAAA0AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAAAAAA0AAAAAAABAAA0AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAAAAAA0AAAAAAABAAA0AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAAAAAA0AAAAAAABAAA0AAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 const getCoordinates = (id: string) => {
   const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -124,6 +127,36 @@ const AdminTrackingMap: React.FC<{ activeDeliveries: Order[] }> = ({ activeDeliv
   return <div ref={mapRef} className="w-full h-80 rounded-xl z-0" />;
 };
 
+// Notification Component
+const NewOrderNotification: React.FC<{ 
+  show: boolean; 
+  orderId: string; 
+  customerName: string; 
+  total: number; 
+  onClose: () => void 
+}> = ({ show, orderId, customerName, total, onClose }) => {
+  if (!show) return null;
+
+  return (
+    <div className="fixed top-20 right-4 z-[200] animate-in slide-in-from-right duration-500">
+      <div className="bg-white border-l-4 border-orange-600 rounded-lg shadow-2xl p-4 w-80 flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-orange-600 font-bold mb-1">
+            <Bell className="w-5 h-5 animate-bounce" />
+            <span>Novo Pedido Recebido!</span>
+          </div>
+          <p className="text-sm font-bold text-gray-800">#{orderId} • {customerName}</p>
+          <p className="text-sm text-green-600 font-bold mt-1">R$ {total.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-2">Verifique a aba "Ativos" agora.</p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const AdminView: React.FC = () => {
   const { menu, updateMenuItem, addMenuItem, removeMenuItem, orders, updateOrderStatus, assignDriver, isAdminLoggedIn, pixConfig, setPixConfig, drivers, addDriver, removeDriver } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -151,6 +184,50 @@ const AdminView: React.FC = () => {
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverPhone, setNewDriverPhone] = useState('');
   const [newDriverPassword, setNewDriverPassword] = useState('');
+
+  // Notification Logic
+  const [notification, setNotification] = useState<{show: boolean, orderId: string, customerName: string, total: number} | null>(null);
+  const prevOrdersRef = useRef<Order[]>(orders);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize Audio
+  useEffect(() => {
+    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audioRef.current.volume = 0.5;
+  }, []);
+
+  // Watch for new orders
+  useEffect(() => {
+    // Only run if we have previous orders to compare against (prevent notification on initial load)
+    if (prevOrdersRef.current.length > 0 && orders.length > prevOrdersRef.current.length) {
+      // Find the new order(s)
+      const newOrders = orders.filter(o => !prevOrdersRef.current.find(po => po.id === o.id));
+      const latestNew = newOrders.find(o => o.status === OrderStatus.PENDING);
+
+      if (latestNew) {
+        // Trigger Notification
+        setNotification({
+          show: true,
+          orderId: latestNew.id,
+          customerName: latestNew.customerName,
+          total: latestNew.total
+        });
+
+        // Try to play sound
+        if (audioRef.current) {
+          audioRef.current.play().catch(e => console.log("Audio autoplay blocked:", e));
+        }
+
+        // Auto hide after 8 seconds
+        const timer = setTimeout(() => {
+          setNotification(prev => prev ? { ...prev, show: false } : null);
+        }, 8000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+    prevOrdersRef.current = orders;
+  }, [orders]);
 
   if (!isAdminLoggedIn) {
     return <div className="p-8 text-center text-red-600">Acesso negado. Faça login.</div>;
@@ -280,6 +357,17 @@ const AdminView: React.FC = () => {
   return (
     <div className="space-y-6">
       
+      {/* Notifications */}
+      {notification && (
+        <NewOrderNotification 
+          show={notification.show} 
+          orderId={notification.orderId}
+          customerName={notification.customerName}
+          total={notification.total}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
       {/* Navigation Tabs */}
       <div className="flex overflow-x-auto gap-2 border-b border-gray-200 pb-2 mb-6">
         <button onClick={() => setViewSection('ORDERS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap ${viewSection === 'ORDERS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
