@@ -176,7 +176,8 @@ const AdminView: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (window.confirm("Tem certeza que deseja excluir este produto do cardápio?")) {
       removeMenuItem(id);
     }
@@ -767,7 +768,7 @@ const AdminView: React.FC = () => {
                             <button onClick={() => startEdit(item)} className="text-orange-600 hover:text-orange-900" title="Editar">
                               <Edit2 className="w-5 h-5" />
                             </button>
-                            <button onClick={() => handleDeleteProduct(item.id)} className="text-red-600 hover:text-red-900" title="Excluir">
+                            <button onClick={(e) => handleDeleteProduct(e, item.id)} className="text-red-600 hover:text-red-900" title="Excluir">
                               <Trash2 className="w-5 h-5" />
                             </button>
                         </div>
