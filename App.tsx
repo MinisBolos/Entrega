@@ -8,9 +8,13 @@ import { UserRole } from './types';
 import { Lock, Truck, X } from 'lucide-react';
 
 const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { setRole, loginAdmin } = useApp();
+  const { setRole, loginAdmin, drivers } = useApp();
   const [adminPassword, setAdminPassword] = useState('');
+  
+  // Driver Login State
+  const [driverId, setDriverId] = useState('');
   const [driverPassword, setDriverPassword] = useState('');
+  
   const [error, setError] = useState('');
   const [driverError, setDriverError] = useState('');
 
@@ -28,14 +32,16 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen
   };
 
   const handleDriverLogin = () => {
-    // Simple validation for driver
-    if (driverPassword === '1234') {
+    const driver = drivers.find(d => d.id === driverId && d.password === driverPassword);
+    
+    if (driver && driver.active) {
       setRole(UserRole.DRIVER);
+      setDriverId('');
       setDriverPassword('');
       setDriverError('');
       onClose();
     } else {
-      setDriverError('Senha incorreta.');
+      setDriverError('ID de entregador ou senha inválidos.');
     }
   };
 
@@ -85,20 +91,29 @@ const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen
             <h3 className="text-sm font-bold text-gray-600 uppercase tracking-wide flex items-center gap-2">
               <Truck className="w-4 h-4" /> Entregadores
             </h3>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <input 
-                type="password" 
-                placeholder="Senha" 
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                value={driverPassword}
-                onChange={e => setDriverPassword(e.target.value)}
+                type="text" 
+                placeholder="ID do Entregador" 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                value={driverId}
+                onChange={e => setDriverId(e.target.value)}
               />
-              <button 
-                onClick={handleDriverLogin}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Entrar
-              </button>
+              <div className="flex gap-2">
+                <input 
+                  type="password" 
+                  placeholder="Senha" 
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={driverPassword}
+                  onChange={e => setDriverPassword(e.target.value)}
+                />
+                <button 
+                  onClick={handleDriverLogin}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Entrar
+                </button>
+              </div>
             </div>
              {driverError && <p className="text-xs text-red-500">{driverError}</p>}
           </div>

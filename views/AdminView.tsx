@@ -125,7 +125,7 @@ const AdminTrackingMap: React.FC<{ activeDeliveries: Order[] }> = ({ activeDeliv
 };
 
 const AdminView: React.FC = () => {
-  const { menu, updateMenuItem, addMenuItem, orders, updateOrderStatus, assignDriver, isAdminLoggedIn, pixConfig, setPixConfig, drivers, addDriver, removeDriver } = useApp();
+  const { menu, updateMenuItem, addMenuItem, removeMenuItem, orders, updateOrderStatus, assignDriver, isAdminLoggedIn, pixConfig, setPixConfig, drivers, addDriver, removeDriver } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<MenuItem>>({});
   
@@ -150,6 +150,7 @@ const AdminView: React.FC = () => {
   // Drivers State
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverPhone, setNewDriverPhone] = useState('');
+  const [newDriverPassword, setNewDriverPassword] = useState('');
 
   if (!isAdminLoggedIn) {
     return <div className="p-8 text-center text-red-600">Acesso negado. Faça login.</div>;
@@ -172,6 +173,12 @@ const AdminView: React.FC = () => {
       const updatedItem = { ...editForm, id: editingId } as MenuItem;
       updateMenuItem(updatedItem);
       setEditingId(null);
+    }
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este produto do cardápio?")) {
+      removeMenuItem(id);
     }
   };
 
@@ -250,10 +257,13 @@ const AdminView: React.FC = () => {
 
   const handleAddDriver = (e: React.FormEvent) => {
     e.preventDefault();
-    if(newDriverName && newDriverPhone) {
-      addDriver(newDriverName, newDriverPhone);
+    if(newDriverName && newDriverPhone && newDriverPassword) {
+      addDriver(newDriverName, newDriverPhone, newDriverPassword);
       setNewDriverName('');
       setNewDriverPhone('');
+      setNewDriverPassword('');
+    } else {
+      alert("Preencha todos os campos do entregador.");
     }
   };
 
@@ -374,6 +384,14 @@ const AdminView: React.FC = () => {
                   onChange={e => setNewDriverPhone(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
+                <input 
+                  type="password" 
+                  placeholder="Senha de Acesso" 
+                  required
+                  value={newDriverPassword}
+                  onChange={e => setNewDriverPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                />
                 <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700">
                   Cadastrar
                 </button>
@@ -389,7 +407,10 @@ const AdminView: React.FC = () => {
                   drivers.map(driver => (
                     <div key={driver.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 group">
                       <div>
-                        <p className="font-bold text-gray-800">{driver.name}</p>
+                        <div className="flex items-center gap-2">
+                           <p className="font-bold text-gray-800">{driver.name}</p>
+                           <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-mono">ID: {driver.id}</span>
+                        </div>
                         <p className="text-xs text-gray-500">{driver.phone}</p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -742,9 +763,14 @@ const AdminView: React.FC = () => {
                           <button onClick={cancelEdit} className="text-red-600 hover:text-red-900"><X className="w-5 h-5" /></button>
                         </div>
                       ) : (
-                        <button onClick={() => startEdit(item)} className="text-orange-600 hover:text-orange-900">
-                          <Edit2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => startEdit(item)} className="text-orange-600 hover:text-orange-900" title="Editar">
+                              <Edit2 className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => handleDeleteProduct(item.id)} className="text-red-600 hover:text-red-900" title="Excluir">
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                        </div>
                       )}
                     </td>
                   </tr>

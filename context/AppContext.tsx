@@ -9,6 +9,7 @@ interface AppContextType {
   menu: MenuItem[];
   setMenu: (menu: MenuItem[]) => void;
   addMenuItem: (item: MenuItem) => void;
+  removeMenuItem: (id: string) => void;
   cart: CartItem[];
   addToCart: (item: MenuItem) => void;
   removeFromCart: (itemId: string) => void;
@@ -28,7 +29,7 @@ interface AppContextType {
   pixConfig: PixConfig;
   setPixConfig: (config: PixConfig) => void;
   drivers: Driver[];
-  addDriver: (name: string, phone: string) => void;
+  addDriver: (name: string, phone: string, password?: string) => void;
   removeDriver: (id: string) => void;
 }
 
@@ -111,16 +112,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const saved = localStorage.getItem('entrega_local_drivers');
       return saved ? JSON.parse(saved) : [
-        { id: 'd1', name: 'João Motoboy', phone: '11999999999', active: true },
-        { id: 'd2', name: 'Maria Entregas', phone: '11888888888', active: true }
+        { id: '101', name: 'João Motoboy', phone: '11999999999', active: true, password: '123' },
+        { id: '102', name: 'Maria Entregas', phone: '11888888888', active: true, password: '123' }
       ];
     } catch {
        return [];
     }
   });
 
-  const addDriver = (name: string, phone: string) => {
-    const newDriver: Driver = { id: Math.random().toString(36).substr(2, 9), name, phone, active: true };
+  const addDriver = (name: string, phone: string, password?: string) => {
+    // Generate a simple numeric ID for easier login
+    const id = Math.floor(1000 + Math.random() * 9000).toString();
+    const newDriver: Driver = { 
+      id, 
+      name, 
+      phone, 
+      active: true,
+      password: password || '1234' 
+    };
     const updated = [...drivers, newDriver];
     setDrivers(updated);
     try {
@@ -175,8 +184,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           console.error("Sync error", err);
         }
       }
-      // Note: Menu sync via storage event is removed because we now use IndexedDB.
-      // For a production app, we would use a BroadcastChannel to sync DB changes across tabs.
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -248,6 +255,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setMenu(prev => [...prev, item]);
   }
 
+  const removeMenuItem = (id: string) => {
+    setMenu(prev => prev.filter(item => item.id !== id));
+  }
+
   const loginAdmin = (password: string) => {
     if (password === '1234') {
       setIsAdminLoggedIn(true);
@@ -268,7 +279,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       role, setRole,
-      menu, setMenu, addMenuItem,
+      menu, setMenu, addMenuItem, removeMenuItem,
       cart, addToCart, removeFromCart, clearCart, isCartOpen, toggleCart,
       orders, placeOrder, updateOrderStatus, assignDriver,
       updateMenuItem,

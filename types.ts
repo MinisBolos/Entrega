@@ -33,6 +33,7 @@ export interface Driver {
   name: string;
   phone: string;
   active: boolean;
+  password?: string;
 }
 
 export interface PixConfig {
