@@ -19,7 +19,7 @@ const StarRating: React.FC<{ rating: number, size?: string }> = ({ rating, size 
 };
 
 const CustomerView: React.FC = () => {
-  const { menu, addToCart, cart, removeFromCart, placeOrder, isCartOpen, toggleCart, pixConfig, orders, reviews, addReview, isLoadingMenu } = useApp();
+  const { menu, addToCart, cart, removeFromCart, placeOrder, isCartOpen, toggleCart, pixConfig, orders, reviews, addReview, isLoadingMenu, updateOrderStatus } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   
   // Form State
@@ -220,7 +220,21 @@ const CustomerView: React.FC = () => {
         <div className="bg-white border-b border-gray-200 shadow-sm p-4 mb-4 rounded-xl animate-in slide-in-from-top">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-gray-400 uppercase">Pedido #{activeOrder.id}</span>
-            <span className="text-xs font-bold text-gray-900">Tempo estimado: 30-45 min</span>
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-bold text-gray-900">Tempo estimado: 30-45 min</span>
+              {(activeOrder.status === OrderStatus.PENDING || activeOrder.status === OrderStatus.PREPARING) && (
+                <button 
+                  onClick={() => {
+                    if(window.confirm('Tem certeza que deseja cancelar seu pedido?')) {
+                      updateOrderStatus(activeOrder.id, OrderStatus.CANCELLED);
+                    }
+                  }}
+                  className="text-xs text-red-600 font-bold hover:underline flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Cancelar
+                </button>
+              )}
+            </div>
           </div>
           <div className={`rounded-lg p-3 text-white flex items-center justify-center gap-2 shadow-md transition-colors duration-500 ${getStatusInfo(activeOrder.status).color}`}>
             {getStatusInfo(activeOrder.status).icon}

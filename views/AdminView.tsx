@@ -661,8 +661,14 @@ const AdminView: React.FC = () => {
                             </button>
                           )}
                           {(order.status === OrderStatus.PENDING || order.status === OrderStatus.PREPARING) && (
-                            <button onClick={() => updateOrderStatus(order.id, OrderStatus.CANCELLED)} className="px-3 bg-red-100 text-red-600 rounded hover:bg-red-200">
-                              <X className="w-4 h-4" />
+                            <button 
+                              onClick={() => {
+                                if(window.confirm("Cancelar pedido?")) updateOrderStatus(order.id, OrderStatus.CANCELLED);
+                              }} 
+                              className="px-3 bg-red-100 text-red-600 rounded hover:bg-red-200 text-xs font-bold flex items-center gap-1"
+                              title="Cancelar Pedido"
+                            >
+                              <X className="w-4 h-4" /> Cancelar
                             </button>
                           )}
                       </div>
