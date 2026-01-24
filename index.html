@@ -13,30 +13,40 @@
       window.process = window.process || {};
       window.process.env = window.process.env || {};
       if (!window.process.env.API_KEY) {
-        window.process.env.API_KEY = 'AIzaSyAVuMWrbneGb1R8Nrekt5GQIHMdR8PydX4'; 
+        // Fallback or empty, application logic should handle missing key if necessary
+        window.process.env.API_KEY = ''; 
       }
     </script>
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-color: #f3f4f6;
       }
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
         background: #cbd5e1;
-        border-radius: 4px;
+        border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
       }
       .leaflet-container {
         z-index: 10;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
   <script type="importmap">

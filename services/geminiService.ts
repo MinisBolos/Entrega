@@ -8,17 +8,17 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 export const generateMenuDescription = async (itemName: string, ingredients: string): Promise<string> => {
   try {
     const model = 'gemini-3-flash-preview';
-    const prompt = `Escreva uma descrição curta, apetitosa e vendedora para um item de cardápio chamado "${itemName}" que contém: ${ingredients}. A descrição deve ter no máximo 25 palavras e ser em Português do Brasil. Use emojis se apropriado.`;
+    const prompt = `Escreva uma descrição curta, apetitosa e persuasiva para um item de cardápio chamado "${itemName}" que contém: ${ingredients}. A descrição deve ter no máximo 20 palavras e ser em Português do Brasil.`;
 
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
     });
 
-    return response.text?.trim() || "Descrição indisponível no momento.";
+    return response.text?.trim() || "Uma delícia preparada especialmente para você.";
   } catch (error) {
     console.warn("Falha na geração de descrição (API/Network):", error);
-    return "Descrição clássica e saborosa.";
+    return "Sabor inigualável e ingredientes frescos.";
   }
 };
 
@@ -26,16 +26,15 @@ export const generateProductImage = async (itemName: string, description: string
   try {
     // Using gemini-2.5-flash-image as per guidelines for general image generation
     const model = 'gemini-2.5-flash-image';
-    const prompt = `Uma foto profissional, apetitosa e de alta qualidade de culinária para um cardápio de delivery: ${itemName}. ${description}. Iluminação de estúdio, fundo neutro ou desfocado, foco na comida.`;
+    const prompt = `Foto profissional de comida, close-up, alta resolução, iluminação de estúdio gastronômico: ${itemName}. ${description}. Fundo desfocado, apetitoso, vibrante.`;
 
     const response = await ai.models.generateContent({
       model: model,
       contents: {
         parts: [{ text: prompt }]
       },
-      config: {
-        // No specific imageConfig needed for standard square generation unless specified
-      }
+      // Note: gemini-2.5-flash-image does not support imageConfig like aspect ratio in the same way strictly, 
+      // but prompt engineering helps.
     });
 
     // Iterate to find inlineData (image)
@@ -61,18 +60,21 @@ export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem
     const model = 'gemini-3-flash-preview';
     
     // Create a simplified menu representation for the AI
-    const menuContext = menuItems.map(item => `${item.name} (${item.category}): R$ ${item.price.toFixed(2)}`).join('\n');
+    const menuContext = menuItems.map(item => `${item.name} (${item.category}): R$ ${item.price.toFixed(2)} - ${item.description}`).join('\n');
 
     const prompt = `
-      Você é um garçom virtual inteligente e prestativo chamado "Chef Bot".
+      Você é um garçom virtual experiente e simpático do app "EntregaLocal".
       
-      Aqui está o cardápio do restaurante:
+      CARDÁPIO DO DIA:
       ${menuContext}
 
-      O cliente disse: "${userQuery}"
+      CLIENTE DISSE: "${userQuery}"
 
-      Com base no pedido do cliente e no cardápio acima, sugira 1 ou 2 opções ideais. 
-      Seja breve, simpático e mencione o preço. Fale em Português do Brasil.
+      Tarefa: Recomende 1 opção do cardápio que combine com o pedido. 
+      Regras:
+      1. Seja curto (máx 2 frases).
+      2. Cite o preço.
+      3. Seja vendedor.
     `;
 
     const response = await ai.models.generateContent({
@@ -80,9 +82,9 @@ export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem
       contents: prompt,
     });
 
-    return response.text?.trim() || "Desculpe, não consegui pensar em uma recomendação agora. Que tal olhar nossos destaques?";
+    return response.text?.trim() || "Que tal experimentar nosso prato do dia? É delicioso!";
   } catch (error) {
     console.warn("Falha na recomendação (API/Network):", error);
-    return "Tivemos um problema técnico, mas recomendo o nosso X-Burguer!";
+    return "Estou com dificuldade de acessar o cardápio agora, mas recomendo dar uma olhada nas nossas promoções!";
   }
 };
