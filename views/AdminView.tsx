@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateMenuDescription, generateProductImage } from '../services/geminiService';
-import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, Calendar, Filter, TrendingUp } from 'lucide-react';
+import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, Calendar, Filter, TrendingUp, ChefHat, CheckCircle, Bike } from 'lucide-react';
 import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig } from '../types';
 import { generatePixString } from '../utils/pix';
 
@@ -410,6 +410,25 @@ const AdminView: React.FC = () => {
   // Pix Preview String
   const previewPixString = generatePixString(tempPixConfig.key, tempPixConfig.holderName, 'SAO PAULO', 1.00);
 
+  const getOrderStatusBadge = (status: OrderStatus) => {
+    switch (status) {
+      case OrderStatus.PENDING:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3" /> Pendente</span>;
+      case OrderStatus.PREPARING:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-800"><ChefHat className="w-3 h-3 animate-pulse" /> Em Preparação</span>;
+      case OrderStatus.READY:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-indigo-100 text-indigo-800"><CheckCircle className="w-3 h-3" /> Aguardando Entregador</span>;
+      case OrderStatus.DELIVERING:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-orange-100 text-orange-800"><Bike className="w-3 h-3 animate-bounce" /> Em Rota de Entrega</span>;
+      case OrderStatus.DELIVERED:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-gray-200 text-gray-800">Entregue</span>;
+      case OrderStatus.CANCELLED:
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-800">Cancelado</span>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -712,15 +731,7 @@ const AdminView: React.FC = () => {
                     >
                       <div className="flex justify-between items-center mb-3 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                         <span className="font-bold text-lg">#{order.id}</span>
-                        <span className={`px-2 py-1 text-xs rounded-full font-bold ${
-                          order.status === OrderStatus.PENDING ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === OrderStatus.PREPARING ? 'bg-blue-100 text-blue-800' :
-                          order.status === OrderStatus.READY ? 'bg-green-100 text-green-800' :
-                          order.status === OrderStatus.DELIVERED ? 'bg-gray-200 text-gray-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {order.status}
-                        </span>
+                        {getOrderStatusBadge(order.status)}
                       </div>
                       <div className="mb-4 text-sm text-gray-600">
                           <div className="flex justify-between items-start">
@@ -731,27 +742,33 @@ const AdminView: React.FC = () => {
                             <PaymentIcon method={order.paymentMethod} changeFor={order.changeFor} />
                           </div>
 
-                          {/* Assign Driver Dropdown */}
+                          {/* Driver Assignment Display */}
                           {activeTab === 'ACTIVE' && order.status !== OrderStatus.DELIVERED && (
                             <div className="mt-3 mb-3">
-                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Entregador Responsável</label>
-                              <div className="flex gap-2">
-                                <select 
-                                  className="flex-1 text-xs border border-gray-300 rounded p-1.5 bg-gray-50 outline-none focus:border-orange-500"
-                                  value={order.driverId || ''}
-                                  onChange={(e) => assignDriver(order.id, e.target.value)}
-                                >
-                                  <option value="">-- Selecionar --</option>
-                                  {drivers.map(d => (
-                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                  ))}
-                                </select>
-                              </div>
+                              {order.status === OrderStatus.READY || order.status === OrderStatus.DELIVERING ? (
+                                <div>
+                                   <label className="text-xs font-bold text-gray-500 uppercase block mb-1">
+                                      {order.status === OrderStatus.DELIVERING ? 'Entregador em Rota' : 'Entregador Responsável'}
+                                   </label>
+                                   <div className="flex gap-2">
+                                     <select 
+                                       className="flex-1 text-xs border border-gray-300 rounded p-1.5 bg-gray-50 outline-none focus:border-orange-500"
+                                       value={order.driverId || ''}
+                                       onChange={(e) => assignDriver(order.id, e.target.value)}
+                                     >
+                                       <option value="">{order.status === OrderStatus.DELIVERING ? 'Em rota...' : '-- Aguardando Coleta --'}</option>
+                                       {drivers.map(d => (
+                                         <option key={d.id} value={d.id}>{d.name}</option>
+                                       ))}
+                                     </select>
+                                   </div>
+                                </div>
+                              ) : null}
                             </div>
                           )}
                           
                           {expandedOrderId === order.id ? (
-                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
                               <div className="mb-3 border-b border-gray-200 pb-2">
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Endereço de Entrega</p>
                                 <p className="text-sm font-medium text-gray-800">{order.address}, {order.addressNumber}</p>
@@ -779,24 +796,36 @@ const AdminView: React.FC = () => {
                       {activeTab === 'ACTIVE' && (
                         <div className="flex gap-2 border-t pt-3">
                             {order.status === OrderStatus.PENDING && (
-                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.PREPARING)} className="flex-1 bg-blue-600 text-white py-1.5 rounded text-sm hover:bg-blue-700">
-                                Aceitar
+                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.PREPARING)} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-green-700 flex items-center justify-center gap-2">
+                                <Check className="w-4 h-4" /> Aceitar Pedido
                               </button>
                             )}
                             {order.status === OrderStatus.PREPARING && (
-                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.READY)} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700">
-                                Pronto
+                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.READY)} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2">
+                                <ChefHat className="w-4 h-4" /> Marcar como Pronto
                               </button>
                             )}
+                             {/* If Ready, we wait for driver or manual assign. If Delivering, we show info */}
+                            {order.status === OrderStatus.READY && (
+                               <div className="flex-1 bg-gray-100 text-gray-500 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide">
+                                  <Clock className="w-4 h-4" /> Aguardando Coleta
+                               </div>
+                            )}
+                            {order.status === OrderStatus.DELIVERING && (
+                               <div className="flex-1 bg-orange-100 text-orange-600 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide">
+                                  <Bike className="w-4 h-4" /> Em Rota de Entrega
+                               </div>
+                            )}
+
                             {(order.status === OrderStatus.PENDING || order.status === OrderStatus.PREPARING) && (
                               <button 
                                 onClick={() => {
                                   if(window.confirm("Cancelar pedido?")) updateOrderStatus(order.id, OrderStatus.CANCELLED);
                                 }} 
-                                className="px-3 bg-red-100 text-red-600 rounded hover:bg-red-200 text-xs font-bold flex items-center gap-1"
+                                className="px-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-xs font-bold flex items-center gap-1"
                                 title="Cancelar Pedido"
                               >
-                                <X className="w-4 h-4" /> Cancelar
+                                <X className="w-4 h-4" />
                               </button>
                             )}
                         </div>

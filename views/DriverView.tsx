@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { OrderStatus, Order, PaymentMethod, LatLng } from '../types';
-import { MapPin, Package, CheckSquare, Clock, ChevronDown, ChevronUp, Navigation, ExternalLink, CreditCard, Banknote, QrCode, DollarSign } from 'lucide-react';
+import { MapPin, Package, CheckSquare, Clock, ChevronDown, ChevronUp, Navigation, ExternalLink, CreditCard, Banknote, QrCode, DollarSign, Bike } from 'lucide-react';
 
 // Declare Leaflet global
 declare global {
@@ -317,9 +317,9 @@ const DriverView: React.FC = () => {
                   actionButton={
                     <button 
                       onClick={() => updateOrderStatus(order.id, OrderStatus.DELIVERING)}
-                      className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                      className="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                     >
-                      Aceitar Entrega
+                      <Bike className="w-4 h-4" /> Aceitar e Iniciar Rota
                     </button>
                   }
                 />
