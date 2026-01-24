@@ -111,7 +111,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [drivers, setDrivers] = useState<Driver[]>(() => {
     try {
       const saved = localStorage.getItem('entrega_local_drivers');
-      return saved ? JSON.parse(saved) : [
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migration: ensure all drivers have a password
+        return parsed.map((d: any) => ({ ...d, password: d.password || '1234' }));
+      }
+      return [
         { id: '101', name: 'João Motoboy', phone: '11999999999', active: true, password: '123' },
         { id: '102', name: 'Maria Entregas', phone: '11888888888', active: true, password: '123' }
       ];
