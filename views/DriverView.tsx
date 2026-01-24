@@ -37,15 +37,22 @@ const PaymentIcon: React.FC<{ method: PaymentMethod, changeFor?: string }> = ({ 
   }
 };
 
-const OrderCard: React.FC<{ order: Order, actionButton?: React.ReactNode, isDelivering?: boolean }> = ({ order, actionButton, isDelivering }) => {
+const OrderCard: React.FC<{ order: Order, actionButton?: React.ReactNode, isDelivering?: boolean, driverLocation?: LatLng }> = ({ order, actionButton, isDelivering, driverLocation }) => {
   const [expanded, setExpanded] = useState(false);
   const totalItems = order.items.reduce((acc, i) => acc + i.quantity, 0);
 
   const handleNavigate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Use address string search instead of coordinates for better real-world accuracy
     const fullAddress = `${order.address}, ${order.addressNumber}, ${order.cep ? order.cep : ''}`;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+    const encodedAddress = encodeURIComponent(fullAddress);
+    
+    let url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    
+    // If delivering and we have driver location, use Directions API
+    if (isDelivering && driverLocation) {
+        url = `https://www.google.com/maps/dir/?api=1&origin=${driverLocation.lat},${driverLocation.lng}&destination=${encodedAddress}&travelmode=driving`;
+    }
+    
     window.open(url, '_blank');
   };
 
@@ -111,7 +118,7 @@ const OrderCard: React.FC<{ order: Order, actionButton?: React.ReactNode, isDeli
               onClick={handleNavigate}
               className="w-full mt-2 bg-blue-50 text-blue-600 border border-blue-200 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
             >
-              <Navigation className="w-4 h-4" /> Navegar com Google Maps
+              <Navigation className="w-4 h-4" /> Navegar com GPS
             </button>
           )}
         </div>
@@ -333,6 +340,7 @@ const DriverView: React.FC = () => {
                   key={order.id} 
                   order={order} 
                   isDelivering={true}
+                  driverLocation={driverLocation}
                   actionButton={
                     <button 
                       onClick={() => updateOrderStatus(order.id, OrderStatus.DELIVERED)}

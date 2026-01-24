@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, ShoppingCart, Trash2, CheckCircle, CreditCard, Banknote, QrCode, Copy, X, DollarSign, Loader2, Clock, ChefHat, Bike, MapPin, Info } from 'lucide-react';
+import { Plus, ShoppingCart, Trash2, CheckCircle, CreditCard, Banknote, QrCode, Copy, X, DollarSign, Loader2, Clock, ChefHat, Bike, MapPin, Info, Star, MessageSquare } from 'lucide-react';
 import ChefBot from '../components/ChefBot';
-import { PaymentMethod, Order, OrderStatus, MenuItem } from '../types';
+import { PaymentMethod, Order, OrderStatus, MenuItem, Review } from '../types';
 import { generatePixString } from '../utils/pix';
 
+const StarRating: React.FC<{ rating: number, size?: string }> = ({ rating, size = "w-3 h-3" }) => {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star 
+          key={star} 
+          className={`${size} ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+        />
+      ))}
+    </div>
+  );
+};
+
 const CustomerView: React.FC = () => {
-  const { menu, addToCart, cart, removeFromCart, placeOrder, isCartOpen, toggleCart, pixConfig, orders } = useApp();
+  const { menu, addToCart, cart, removeFromCart, placeOrder, isCartOpen, toggleCart, pixConfig, orders, reviews, addReview, isLoadingMenu } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   
   // Form State
@@ -23,6 +36,12 @@ const CustomerView: React.FC = () => {
   
   // Product Modal State
   const [viewProduct, setViewProduct] = useState<MenuItem | null>(null);
+
+  // Review Form State
+  const [reviewName, setReviewName] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewForm, setShowReviewForm] = useState(false);
   
   // Track the most recent local order ID - Initialize from LocalStorage
   const [lastOrderId, setLastOrderId] = useState<string | null>(() => {
@@ -39,6 +58,14 @@ const CustomerView: React.FC = () => {
     : menu.filter(item => item.category === selectedCategory);
 
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+  // Helper to get average rating
+  const getProductRating = (itemId: string) => {
+    const itemReviews = reviews.filter(r => r.itemId === itemId);
+    if (itemReviews.length === 0) return { average: 0, count: 0 };
+    const sum = itemReviews.reduce((acc, r) => acc + r.rating, 0);
+    return { average: sum / itemReviews.length, count: itemReviews.length };
+  };
 
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement> | React.ChangeEvent<HTMLInputElement>) => {
     const rawCep = e.target.value.replace(/\D/g, '');
@@ -142,6 +169,25 @@ const CustomerView: React.FC = () => {
     }
   };
 
+  const handleSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (viewProduct && reviewName && reviewComment) {
+      const newReview: Review = {
+        id: Math.random().toString(36).substr(2, 9),
+        itemId: viewProduct.id,
+        customerName: reviewName,
+        rating: reviewRating,
+        comment: reviewComment,
+        date: new Date().toLocaleDateString()
+      };
+      addReview(newReview);
+      setReviewName('');
+      setReviewComment('');
+      setReviewRating(5);
+      setShowReviewForm(false);
+    }
+  };
+
   const pixPayload = activeOrder && showPixModal 
     ? generatePixString(pixConfig.key, pixConfig.holderName, 'SAO PAULO', activeOrder.total, activeOrder.id.replace(/[^a-zA-Z0-9]/g, '')) 
     : '';
@@ -206,46 +252,76 @@ const CustomerView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Menu Grid - COMPACT VERSION */}
-        <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {filteredMenu.map(item => (
-            <div 
-              key={item.id} 
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col border border-gray-100"
-            >
-              <div 
-                className="h-24 overflow-hidden relative group cursor-pointer"
-                onClick={() => setViewProduct(item)}
-              >
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.name} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                   <Info className="text-white w-6 h-6 drop-shadow-md" />
+        {/* Menu Grid - RESPONSIVE LAYOUT IMPROVED */}
+        <div className="lg:col-span-3">
+          {isLoadingMenu ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 animate-pulse">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 h-80 flex flex-col overflow-hidden">
+                  <div className="h-40 bg-gray-200"></div>
+                  <div className="p-4 flex-1 flex flex-col gap-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="flex-1"></div>
+                    <div className="h-8 bg-gray-200 rounded w-full"></div>
+                  </div>
                 </div>
-              </div>
-              <div className="p-2 flex-1 flex flex-col">
-                <div className="mb-1 cursor-pointer" onClick={() => setViewProduct(item)}>
-                  <h3 className="font-bold text-gray-900 text-xs line-clamp-1 leading-tight hover:text-orange-600 transition-colors">{item.name}</h3>
-                  <p className="text-xs text-green-700 font-bold mt-0.5">R$ {item.price.toFixed(2)}</p>
-                </div>
-                <p 
-                  className="text-[10px] text-gray-500 mb-2 line-clamp-2 flex-1 leading-tight cursor-pointer"
-                  onClick={() => setViewProduct(item)}
-                >
-                  {item.description}
-                </p>
-                <button
-                  onClick={() => addToCart(item)}
-                  className="w-full bg-orange-50 text-orange-700 text-[10px] font-bold py-1.5 rounded hover:bg-orange-100 flex items-center justify-center gap-1 transition-colors uppercase tracking-wide"
-                >
-                  <Plus className="w-3 h-3" /> Adicionar
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {filteredMenu.map(item => {
+                const { average, count } = getProductRating(item.id);
+                return (
+                  <div 
+                    key={item.id} 
+                    className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col border border-gray-100 group"
+                  >
+                    <div 
+                      className="h-32 overflow-hidden relative cursor-pointer"
+                      onClick={() => setViewProduct(item)}
+                    >
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                        <span className="text-white text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 flex items-center gap-1">
+                          <Info className="w-3 h-3" /> Ver Detalhes
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col">
+                      <div className="mb-2 cursor-pointer" onClick={() => setViewProduct(item)}>
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-bold text-gray-800 text-sm line-clamp-1 leading-tight hover:text-orange-600 transition-colors">{item.name}</h3>
+                          <span className="text-sm text-green-700 font-bold whitespace-nowrap">R$ {item.price.toFixed(2)}</span>
+                        </div>
+                        {/* Ratings on Card */}
+                        <div className="flex items-center gap-1 mt-1">
+                          <StarRating rating={average} size="w-3 h-3" />
+                          <span className="text-[10px] text-gray-400">({count})</span>
+                        </div>
+                      </div>
+                      <p 
+                        className="text-xs text-gray-500 mb-3 line-clamp-2 flex-1 leading-relaxed cursor-pointer"
+                        onClick={() => setViewProduct(item)}
+                      >
+                        {item.description}
+                      </p>
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="w-full bg-orange-50 text-orange-700 text-xs font-bold py-2 rounded-lg hover:bg-orange-100 flex items-center justify-center gap-2 transition-colors uppercase tracking-wide border border-orange-100"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Adicionar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Cart Sidebar */}
@@ -434,36 +510,135 @@ const CustomerView: React.FC = () => {
         </div>
       </div>
 
-      {/* Product Details Modal */}
+      {/* Product Details Modal with Reviews */}
       {viewProduct && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
-          <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setViewProduct(null)} className="absolute top-4 right-4 bg-white/80 hover:bg-white p-2 rounded-full text-gray-800 z-10 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="h-64 w-full relative">
-               <img src={viewProduct.imageUrl} alt={viewProduct.name} className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-               <div className="absolute bottom-4 left-4 text-white">
-                  <p className="text-xs font-bold uppercase tracking-wider bg-orange-600 inline-block px-2 py-1 rounded mb-2">{viewProduct.category}</p>
+          <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            
+            {/* Modal Header/Image */}
+            <div className="relative shrink-0">
+               <div className="h-48 md:h-64 w-full relative">
+                  <img src={viewProduct.imageUrl} alt={viewProduct.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  <button onClick={() => setViewProduct(null)} className="absolute top-4 right-4 bg-white/80 hover:bg-white p-2 rounded-full text-gray-800 z-10 transition-colors shadow-lg">
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-4 left-6 text-white">
+                      <p className="text-xs font-bold uppercase tracking-wider bg-orange-600 inline-block px-2 py-1 rounded mb-2 shadow-sm">{viewProduct.category}</p>
+                      <h2 className="text-2xl md:text-3xl font-bold leading-tight drop-shadow-sm">{viewProduct.name}</h2>
+                  </div>
                </div>
             </div>
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <h2 className="text-2xl font-bold text-gray-900 leading-tight">{viewProduct.name}</h2>
-                <span className="text-xl font-bold text-green-700 whitespace-nowrap ml-4">R$ {viewProduct.price.toFixed(2)}</span>
+
+            {/* Modal Content Scrollable Area */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-2xl font-bold text-green-700 whitespace-nowrap">R$ {viewProduct.price.toFixed(2)}</span>
+                <div className="flex flex-col items-end">
+                   {(() => {
+                      const { average, count } = getProductRating(viewProduct.id);
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-700">{average.toFixed(1)}</span>
+                          <StarRating rating={average} size="w-4 h-4" />
+                          <span className="text-xs text-gray-500">({count} avaliações)</span>
+                        </div>
+                      );
+                   })()}
+                </div>
               </div>
-              <p className="text-gray-600 mb-6 leading-relaxed">{viewProduct.description}</p>
+              
+              <p className="text-gray-600 mb-8 leading-relaxed text-base">{viewProduct.description}</p>
               
               <button 
                 onClick={() => {
                   addToCart(viewProduct);
                   setViewProduct(null);
                 }}
-                className="w-full bg-orange-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-orange-700 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
+                className="w-full bg-orange-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-orange-700 transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-orange-200 mb-8"
               >
                 <Plus className="w-5 h-5" /> Adicionar ao Pedido
               </button>
+
+              <hr className="border-gray-100 mb-6" />
+
+              {/* Reviews Section */}
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                       <MessageSquare className="w-5 h-5 text-gray-400" /> Avaliações
+                    </h3>
+                    <button 
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      className="text-sm text-blue-600 font-bold hover:underline"
+                    >
+                      {showReviewForm ? 'Cancelar' : 'Avaliar Produto'}
+                    </button>
+                 </div>
+
+                 {/* Review Form */}
+                 {showReviewForm && (
+                   <form onSubmit={handleSubmitReview} className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 animate-in slide-in-from-top-2">
+                      <div className="mb-3">
+                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sua Nota</label>
+                         <div className="flex gap-1">
+                           {[1, 2, 3, 4, 5].map(star => (
+                             <button 
+                               key={star} 
+                               type="button" 
+                               onClick={() => setReviewRating(star)}
+                               className="transition-transform hover:scale-110 focus:outline-none"
+                             >
+                               <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                             </button>
+                           ))}
+                         </div>
+                      </div>
+                      <div className="mb-3">
+                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Seu Nome</label>
+                         <input 
+                           required
+                           type="text" 
+                           value={reviewName} 
+                           onChange={e => setReviewName(e.target.value)}
+                           className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-orange-500" 
+                           placeholder="Ex: João Silva"
+                         />
+                      </div>
+                      <div className="mb-3">
+                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Comentário</label>
+                         <textarea 
+                           required
+                           value={reviewComment}
+                           onChange={e => setReviewComment(e.target.value)}
+                           className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-orange-500 h-20 resize-none"
+                           placeholder="O que achou do produto?"
+                         />
+                      </div>
+                      <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-blue-700">Enviar Avaliação</button>
+                   </form>
+                 )}
+
+                 {/* Reviews List */}
+                 <div className="space-y-4">
+                    {reviews.filter(r => r.itemId === viewProduct.id).length === 0 ? (
+                      <p className="text-center text-gray-400 text-sm py-4">Este produto ainda não tem avaliações. Seja o primeiro!</p>
+                    ) : (
+                      reviews.filter(r => r.itemId === viewProduct.id).map(review => (
+                        <div key={review.id} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
+                           <div className="flex justify-between items-start mb-1">
+                              <span className="font-bold text-sm text-gray-800">{review.customerName}</span>
+                              <span className="text-xs text-gray-400">{review.date}</span>
+                           </div>
+                           <div className="flex mb-1">
+                             <StarRating rating={review.rating} size="w-3 h-3" />
+                           </div>
+                           <p className="text-sm text-gray-600">{review.comment}</p>
+                        </div>
+                      ))
+                    )}
+                 </div>
+              </div>
             </div>
           </div>
         </div>

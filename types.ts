@@ -28,6 +28,15 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
+export interface Review {
+  id: string;
+  itemId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
 export interface Driver {
   id: string;
   name: string;

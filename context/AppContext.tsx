@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { MenuItem, Order, OrderStatus, UserRole, CartItem, LatLng, PaymentMethod, Driver, PixConfig } from '../types';
+import { MenuItem, Order, OrderStatus, UserRole, CartItem, LatLng, PaymentMethod, Driver, PixConfig, Review } from '../types';
 import { INITIAL_MENU } from '../constants';
 import { saveMenuToDB, getMenuFromDB } from '../utils/db';
 
@@ -8,6 +8,7 @@ interface AppContextType {
   setRole: (role: UserRole) => void;
   menu: MenuItem[];
   setMenu: (menu: MenuItem[]) => void;
+  isLoadingMenu: boolean; // New state exposed
   addMenuItem: (item: MenuItem) => void;
   removeMenuItem: (id: string) => void;
   cart: CartItem[];
@@ -31,6 +32,8 @@ interface AppContextType {
   drivers: Driver[];
   addDriver: (name: string, phone: string, password?: string) => void;
   removeDriver: (id: string) => void;
+  reviews: Review[];
+  addReview: (review: Review) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,11 +46,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   
   // Initialize Menu with default constant, data will be loaded asynchronously
   const [menu, setMenu] = useState<MenuItem[]>(INITIAL_MENU);
+  const [isLoadingMenu, setIsLoadingMenu] = useState(true); // Start loading true
   const [isMenuLoaded, setIsMenuLoaded] = useState(false);
 
   // Load Menu Async (IndexedDB -> LocalStorage Fallback -> Default)
   useEffect(() => {
     const initMenu = async () => {
+      setIsLoadingMenu(true);
       try {
         // 1. Try IndexedDB (Preferred)
         const dbMenu = await getMenuFromDB();
@@ -73,6 +78,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.error("Initialization error", err);
       } finally {
         setIsMenuLoaded(true);
+        setIsLoadingMenu(false); // Stop loading
       }
     };
     initMenu();
@@ -88,6 +94,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
+  // Reviews State
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    try {
+      const saved = localStorage.getItem('entrega_local_reviews');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const addReview = (review: Review) => {
+    const updatedReviews = [review, ...reviews];
+    setReviews(updatedReviews);
+    try {
+      localStorage.setItem('entrega_local_reviews', JSON.stringify(updatedReviews));
+    } catch (e) { console.error("Failed to save reviews", e); }
+  };
+
   // Settings: Pix
   const [pixConfig, setPixConfigState] = useState<PixConfig>(() => {
     try {
@@ -284,14 +308,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider value={{
       role, setRole,
-      menu, setMenu, addMenuItem, removeMenuItem,
+      menu, setMenu, addMenuItem, removeMenuItem, isLoadingMenu,
       cart, addToCart, removeFromCart, clearCart, isCartOpen, toggleCart,
       orders, placeOrder, updateOrderStatus, assignDriver,
       updateMenuItem,
       isAdminLoggedIn, loginAdmin, logoutAdmin,
       driverLocation, updateDriverLocation,
       pixConfig, setPixConfig,
-      drivers, addDriver, removeDriver
+      drivers, addDriver, removeDriver,
+      reviews, addReview
     }}>
       {children}
     </AppContext.Provider>

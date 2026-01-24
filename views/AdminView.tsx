@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateMenuDescription, generateProductImage } from '../services/geminiService';
-import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink } from 'lucide-react';
+import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye } from 'lucide-react';
 import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig } from '../types';
 import { generatePixString } from '../utils/pix';
 
@@ -133,24 +133,32 @@ const NewOrderNotification: React.FC<{
   orderId: string; 
   customerName: string; 
   total: number; 
-  onClose: () => void 
-}> = ({ show, orderId, customerName, total, onClose }) => {
+  onClose: () => void;
+  onView: () => void;
+}> = ({ show, orderId, customerName, total, onClose, onView }) => {
   if (!show) return null;
 
   return (
     <div className="fixed top-20 right-4 z-[200] animate-in slide-in-from-right duration-500">
-      <div className="bg-white border-l-4 border-orange-600 rounded-lg shadow-2xl p-4 w-80 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-orange-600 font-bold mb-1">
-            <Bell className="w-5 h-5 animate-bounce" />
-            <span>Novo Pedido Recebido!</span>
+      <div className="bg-white border-l-4 border-orange-600 rounded-lg shadow-2xl p-4 w-80">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <div className="flex items-center gap-2 text-orange-600 font-bold mb-1">
+              <Bell className="w-5 h-5 animate-bounce" />
+              <span>Novo Pedido!</span>
+            </div>
+            <p className="text-sm font-bold text-gray-800">#{orderId} • {customerName}</p>
+            <p className="text-sm text-green-600 font-bold mt-1">R$ {total.toFixed(2)}</p>
           </div>
-          <p className="text-sm font-bold text-gray-800">#{orderId} • {customerName}</p>
-          <p className="text-sm text-green-600 font-bold mt-1">R$ {total.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-2">Verifique a aba "Ativos" agora.</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-          <X className="w-5 h-5" />
+        <button 
+          onClick={onView} 
+          className="w-full bg-orange-100 text-orange-700 text-sm font-bold py-2 rounded-lg hover:bg-orange-200 transition-colors flex items-center justify-center gap-2"
+        >
+          <Eye className="w-4 h-4" /> Ver Pedido
         </button>
       </div>
     </div>
@@ -190,10 +198,10 @@ const AdminView: React.FC = () => {
   const prevOrdersRef = useRef<Order[]>(orders);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize Audio
+  // Initialize Audio with Base64 for reliability
   useEffect(() => {
-    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audioRef.current.volume = 0.5;
+    audioRef.current = new Audio(NOTIFICATION_SOUND);
+    audioRef.current.volume = 0.6;
   }, []);
 
   // Watch for new orders
@@ -215,13 +223,14 @@ const AdminView: React.FC = () => {
 
         // Try to play sound
         if (audioRef.current) {
+          audioRef.current.currentTime = 0;
           audioRef.current.play().catch(e => console.log("Audio autoplay blocked:", e));
         }
 
-        // Auto hide after 8 seconds
+        // Auto hide after 15 seconds (extended time to allow interaction)
         const timer = setTimeout(() => {
           setNotification(prev => prev ? { ...prev, show: false } : null);
-        }, 8000);
+        }, 15000);
         
         return () => clearTimeout(timer);
       }
@@ -345,6 +354,16 @@ const AdminView: React.FC = () => {
     }
   };
 
+  // Handlers for Notification Interaction
+  const handleViewNotificationOrder = () => {
+    if (notification) {
+      setViewSection('ORDERS');
+      setActiveTab('ACTIVE');
+      setExpandedOrderId(notification.orderId);
+      setNotification(null);
+    }
+  };
+
   const activeOrders = orders.filter(o => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED);
   const historyOrders = orders.filter(o => o.status === OrderStatus.DELIVERED || o.status === OrderStatus.CANCELLED);
   const deliveringOrders = orders.filter(o => o.status === OrderStatus.DELIVERING);
@@ -365,6 +384,7 @@ const AdminView: React.FC = () => {
           customerName={notification.customerName}
           total={notification.total}
           onClose={() => setNotification(null)}
+          onView={handleViewNotificationOrder}
         />
       )}
 
@@ -765,16 +785,16 @@ const AdminView: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/3">Descrição</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preço (R$)</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/3">Descrição</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preço (R$)</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {menu.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2 whitespace-nowrap">
                       {editingId === item.id ? (
                         <div className="space-y-2">
                            <input
@@ -805,12 +825,12 @@ const AdminView: React.FC = () => {
                         </div>
                       ) : (
                         <div className="flex items-center">
-                          <img className="h-10 w-10 rounded-full object-cover mr-3" src={item.imageUrl} alt="" />
+                          <img className="h-8 w-8 rounded-full object-cover mr-3" src={item.imageUrl} alt="" />
                           <div className="text-sm font-medium text-gray-900">{item.name}</div>
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-2">
                       {editingId === item.id ? (
                         <div className="flex flex-col gap-2">
                           <textarea
@@ -829,10 +849,10 @@ const AdminView: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <div className="text-sm text-gray-500 line-clamp-2">{item.description}</div>
+                        <div className="text-xs text-gray-500 line-clamp-2">{item.description}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2 whitespace-nowrap">
                       {editingId === item.id ? (
                         <input
                           type="number"
@@ -845,19 +865,19 @@ const AdminView: React.FC = () => {
                         <div className="text-sm text-gray-900">R$ {item.price.toFixed(2)}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                       {editingId === item.id ? (
                         <div className="flex justify-end gap-2">
-                          <button onClick={saveEdit} className="text-green-600 hover:text-green-900"><Check className="w-5 h-5" /></button>
-                          <button onClick={cancelEdit} className="text-red-600 hover:text-red-900"><X className="w-5 h-5" /></button>
+                          <button onClick={saveEdit} className="text-green-600 hover:text-green-900"><Check className="w-4 h-4" /></button>
+                          <button onClick={cancelEdit} className="text-red-600 hover:text-red-900"><X className="w-4 h-4" /></button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-3">
                             <button onClick={() => startEdit(item)} className="text-orange-600 hover:text-orange-900" title="Editar">
-                              <Edit2 className="w-5 h-5" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
                             <button onClick={(e) => handleDeleteProduct(e, item.id)} className="text-red-600 hover:text-red-900" title="Excluir">
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                         </div>
                       )}
