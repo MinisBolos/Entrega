@@ -68,14 +68,16 @@ const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> 
             &copy; 2024 EntregaLocal AI. Powered by Google Gemini.
           </p>
           
-          {role === UserRole.CUSTOMER && (
-            <button 
-              onClick={onLoginClick}
-              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
-            >
-              <Lock className="w-3 h-3" /> Acesso Parceiro
-            </button>
-          )}
+          <div className="flex items-center gap-4">
+            {role === UserRole.CUSTOMER && (
+              <button 
+                onClick={onLoginClick}
+                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+              >
+                <Lock className="w-3 h-3" /> Acesso Parceiro
+              </button>
+            )}
+          </div>
         </div>
       </footer>
     </div>

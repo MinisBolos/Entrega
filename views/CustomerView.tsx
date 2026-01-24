@@ -252,33 +252,33 @@ const CustomerView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Menu Grid - RESPONSIVE LAYOUT IMPROVED */}
+        {/* Menu Grid - RESPONSIVE LAYOUT IMPROVED (More Compact) */}
         <div className="lg:col-span-3">
           {isLoadingMenu ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 animate-pulse">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-pulse">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 h-80 flex flex-col overflow-hidden">
-                  <div className="h-40 bg-gray-200"></div>
-                  <div className="p-4 flex-1 flex flex-col gap-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-100 h-64 flex flex-col overflow-hidden">
+                  <div className="h-24 bg-gray-200"></div>
+                  <div className="p-3 flex-1 flex flex-col gap-2">
+                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-2 bg-gray-200 rounded w-1/2"></div>
                     <div className="flex-1"></div>
-                    <div className="h-8 bg-gray-200 rounded w-full"></div>
+                    <div className="h-6 bg-gray-200 rounded w-full"></div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredMenu.map(item => {
                 const { average, count } = getProductRating(item.id);
                 return (
                   <div 
                     key={item.id} 
-                    className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col border border-gray-100 group"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col border border-gray-100 group"
                   >
                     <div 
-                      className="h-32 overflow-hidden relative cursor-pointer"
+                      className="h-24 overflow-hidden relative cursor-pointer"
                       onClick={() => setViewProduct(item)}
                     >
                       <img 
@@ -286,35 +286,35 @@ const CustomerView: React.FC = () => {
                         alt={item.name} 
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
-                        <span className="text-white text-xs font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 flex items-center gap-1">
-                          <Info className="w-3 h-3" /> Ver Detalhes
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2">
+                        <span className="text-white text-[10px] font-bold bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/30 flex items-center gap-1">
+                          <Info className="w-2.5 h-2.5" /> Detalhes
                         </span>
                       </div>
                     </div>
-                    <div className="p-3 flex-1 flex flex-col">
-                      <div className="mb-2 cursor-pointer" onClick={() => setViewProduct(item)}>
+                    <div className="p-2.5 flex-1 flex flex-col">
+                      <div className="mb-1.5 cursor-pointer" onClick={() => setViewProduct(item)}>
                         <div className="flex justify-between items-start">
                           <h3 className="font-bold text-gray-800 text-sm line-clamp-1 leading-tight hover:text-orange-600 transition-colors">{item.name}</h3>
-                          <span className="text-sm text-green-700 font-bold whitespace-nowrap">R$ {item.price.toFixed(2)}</span>
+                          <span className="text-xs text-green-700 font-bold whitespace-nowrap">R$ {item.price.toFixed(2)}</span>
                         </div>
                         {/* Ratings on Card */}
-                        <div className="flex items-center gap-1 mt-1">
-                          <StarRating rating={average} size="w-3 h-3" />
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <StarRating rating={average} size="w-2.5 h-2.5" />
                           <span className="text-[10px] text-gray-400">({count})</span>
                         </div>
                       </div>
                       <p 
-                        className="text-xs text-gray-500 mb-3 line-clamp-2 flex-1 leading-relaxed cursor-pointer"
+                        className="text-[11px] text-gray-500 mb-2 line-clamp-2 flex-1 leading-relaxed cursor-pointer"
                         onClick={() => setViewProduct(item)}
                       >
                         {item.description}
                       </p>
                       <button
                         onClick={() => addToCart(item)}
-                        className="w-full bg-orange-50 text-orange-700 text-xs font-bold py-2 rounded-lg hover:bg-orange-100 flex items-center justify-center gap-2 transition-colors uppercase tracking-wide border border-orange-100"
+                        className="w-full bg-orange-50 text-orange-700 text-[11px] font-bold py-1.5 rounded-lg hover:bg-orange-100 flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wide border border-orange-100"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Adicionar
+                        <Plus className="w-3 h-3" /> Adicionar
                       </button>
                     </div>
                   </div>
