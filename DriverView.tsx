@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from '../context/AppContext';
-import { OrderStatus, Order, PaymentMethod, LatLng, UserRole } from '../types';
-import { MapPin, Package, CheckSquare, Clock, ChevronDown, ChevronUp, Navigation, ExternalLink, CreditCard, Banknote, QrCode, DollarSign, Bike, Info, X } from 'lucide-react';
+import { useApp } from './AppContext';
+import { OrderStatus, Order, PaymentMethod, LatLng } from './types';
+import { MapPin, Package, CheckSquare, Clock, ChevronDown, ChevronUp, Navigation, ExternalLink, CreditCard, Banknote, QrCode, DollarSign, Bike } from 'lucide-react';
 
 // Declare Leaflet global
 declare global {
@@ -25,11 +24,11 @@ const RESTAURANT_LOCATION = { lat: -23.5505, lng: -46.6333 };
 
 const PaymentIcon: React.FC<{ method: PaymentMethod, changeFor?: string }> = ({ method, changeFor }) => {
   switch (method) {
-    case 'PIX': return <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded whitespace-nowrap"><QrCode className="w-3 h-3" /> Pix</div>;
-    case 'CREDIT': return <div className="flex items-center gap-1 text-blue-600 text-xs font-bold bg-blue-50 px-2 py-1 rounded whitespace-nowrap"><CreditCard className="w-3 h-3" /> Crédito</div>;
-    case 'DEBIT': return <div className="flex items-center gap-1 text-orange-600 text-xs font-bold bg-orange-50 px-2 py-1 rounded whitespace-nowrap"><Banknote className="w-3 h-3" /> Débito</div>;
+    case 'PIX': return <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded"><QrCode className="w-3 h-3" /> Pix</div>;
+    case 'CREDIT': return <div className="flex items-center gap-1 text-blue-600 text-xs font-bold bg-blue-50 px-2 py-1 rounded"><CreditCard className="w-3 h-3" /> Crédito</div>;
+    case 'DEBIT': return <div className="flex items-center gap-1 text-orange-600 text-xs font-bold bg-orange-50 px-2 py-1 rounded"><Banknote className="w-3 h-3" /> Débito</div>;
     case 'CASH': return (
-      <div className="flex flex-col items-end whitespace-nowrap">
+      <div className="flex flex-col items-end">
         <div className="flex items-center gap-1 text-yellow-700 text-xs font-bold bg-yellow-50 px-2 py-1 rounded"><DollarSign className="w-3 h-3" /> Dinheiro</div>
         {changeFor && <span className="text-[10px] text-yellow-600 mt-0.5 font-medium">Troco p/ R$ {changeFor}</span>}
       </div>
@@ -59,16 +58,16 @@ const OrderCard: React.FC<{ order: Order, actionButton?: React.ReactNode, isDeli
 
   return (
     <div 
-      className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full hover:shadow-md transition-all cursor-pointer overflow-hidden"
+      className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full hover:shadow-md transition-all cursor-pointer"
       onClick={() => setExpanded(!expanded)}
     >
       <div>
         <div className="flex justify-between items-start mb-4">
-          <div className="overflow-hidden">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Pedido #{order.id}</span>
-            <h3 className="text-lg font-bold text-gray-900 mt-1 truncate">{order.customerName}</h3>
+          <div>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pedido #{order.id}</span>
+            <h3 className="text-lg font-bold text-gray-900 mt-1">{order.customerName}</h3>
           </div>
-          <div className="flex flex-col items-end gap-1 ml-2 shrink-0">
+          <div className="flex flex-col items-end gap-1">
             <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-bold">
               R$ {order.total.toFixed(2)}
             </span>
@@ -79,29 +78,29 @@ const OrderCard: React.FC<{ order: Order, actionButton?: React.ReactNode, isDeli
         <div className="space-y-3 mb-6">
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm text-gray-800 font-medium leading-tight break-words">
+            <div>
+              <p className="text-sm text-gray-800 font-medium leading-tight">
                 {order.address}, {order.addressNumber}
               </p>
               {order.cep && <p className="text-xs text-gray-500">CEP: {order.cep}</p>}
               {order.referencePoint && (
-                <p className="text-xs text-gray-500 mt-1 truncate">Ref: {order.referencePoint}</p>
+                <p className="text-xs text-gray-500 mt-1">Ref: {order.referencePoint}</p>
               )}
             </div>
           </div>
           <div className="flex items-start gap-3">
              <Package className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
-             <div className="flex-1 min-w-0">
+             <div className="flex-1">
                <div className="flex items-center justify-between">
                  <p className="text-sm text-gray-600 font-medium">{totalItems} itens</p>
-                 {expanded ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
+                 {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                </div>
                
                {expanded ? (
                  <ul className="mt-2 bg-gray-50 p-2 rounded-lg space-y-1">
                    {order.items.map((item, idx) => (
-                     <li key={idx} className="text-sm text-gray-800 flex justify-between gap-2">
-                       <span className="truncate">{item.quantity}x {item.name}</span>
+                     <li key={idx} className="text-sm text-gray-800 flex justify-between">
+                       <span>{item.quantity}x {item.name}</span>
                      </li>
                    ))}
                  </ul>
@@ -215,36 +214,13 @@ const DriverMap: React.FC<{ activeOrders: Order[], driverLocation: LatLng }> = (
   return <div ref={mapRef} className="w-full h-full rounded-xl z-0" />;
 }
 
-// Generic Toast Component
-const Toast: React.FC<{ message: string; show: boolean; onClose: () => void; color?: string }> = ({ message, show, onClose, color = "bg-gray-800" }) => {
-  if (!show) return null;
-  return (
-    <div className={`fixed bottom-6 right-6 z-[300] ${color} text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right`}>
-      <Info className="w-6 h-6" />
-      <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full"><X className="w-4 h-4" /></button>
-    </div>
-  );
-};
-
 const DriverView: React.FC = () => {
-  const { orders, updateOrderStatus, updateDriverLocation, driverLocation, lastNotification } = useApp();
+  const { orders, updateOrderStatus, updateDriverLocation, driverLocation } = useApp();
   const [useRealGPS, setUseRealGPS] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const availableOrders = orders.filter(o => o.status === OrderStatus.READY);
   const myDeliveries = orders.filter(o => o.status === OrderStatus.DELIVERING);
   const history = orders.filter(o => o.status === OrderStatus.DELIVERED); // Full history
-
-  // Listen for Notifications from Admin (e.g., Assigned Order)
-  useEffect(() => {
-    if (lastNotification && lastNotification.targetRole === UserRole.DRIVER) {
-      setToastMessage(lastNotification.message);
-      // Optional: Sound here
-      const timer = setTimeout(() => setToastMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastNotification]);
 
   // Real-time GPS Tracking Logic
   useEffect(() => {
@@ -287,14 +263,6 @@ const DriverView: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Toast Notification */}
-      <Toast 
-        show={!!toastMessage} 
-        message={toastMessage || ''} 
-        onClose={() => setToastMessage(null)} 
-        color="bg-green-700"
-      />
-
       {/* Driver Header Status & Map */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
          <div className="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden h-64 lg:h-80 relative border border-gray-200">
@@ -400,7 +368,7 @@ const DriverView: React.FC = () => {
                     <span className="font-bold text-gray-700">#{order.id}</span>
                     <span className="text-green-600 text-xs font-bold uppercase">Entregue</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 break-words">{order.address}, {order.addressNumber}</p>
+                  <p className="text-xs text-gray-500 mt-1">{order.address}, {order.addressNumber}</p>
                   <p className="text-xs text-gray-400 mt-1">{order.createdAt.toLocaleDateString()}</p>
                 </div>
               ))

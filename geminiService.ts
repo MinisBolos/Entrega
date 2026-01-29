@@ -1,5 +1,6 @@
+
 import { GoogleGenAI } from "@google/genai";
-import { MenuItem } from "../types";
+import { MenuItem } from "./types";
 
 // Initialize client lazily to prevent crash on module load if env is invalid
 let aiClient: GoogleGenAI | null = null;
@@ -12,18 +13,6 @@ const getAI = () => {
     aiClient = new GoogleGenAI({ apiKey: key });
   }
   return aiClient;
-};
-
-// Helper to detect quota errors from various error object shapes
-const isQuotaError = (error: any): boolean => {
-  try {
-    const errStr = typeof error === 'object' 
-      ? JSON.stringify(error, Object.getOwnPropertyNames(error)) 
-      : String(error);
-    return errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('quota');
-  } catch (e) {
-    return false;
-  }
 };
 
 export const generateMenuDescription = async (itemName: string, ingredients: string): Promise<string> => {
@@ -39,12 +28,8 @@ export const generateMenuDescription = async (itemName: string, ingredients: str
 
     return response.text?.trim() || "Uma delícia preparada especialmente para você.";
   } catch (error) {
-    console.error("Falha na geração de descrição (API/Network):", error);
-    
-    if (isQuotaError(error)) {
-      throw new Error("QUOTA_EXCEEDED");
-    }
-    
+    console.warn("Falha na geração de descrição (API/Network):", error);
+    // Propagate error so admin UI can show specific messages (like Quota Exceeded)
     throw error;
   }
 };
@@ -77,11 +62,6 @@ export const generateProductImage = async (itemName: string, description: string
     return null;
   } catch (error) {
     console.error("Falha na geração de imagem:", error);
-    
-    if (isQuotaError(error)) {
-      throw new Error("QUOTA_EXCEEDED");
-    }
-
     throw error;
   }
 };
@@ -118,7 +98,9 @@ export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem
   } catch (error: any) {
     console.warn("Falha na recomendação (API/Network):", error);
     
-    if (isQuotaError(error)) {
+    // Check for Quota Exceeded error in various formats
+    const errStr = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+    if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED')) {
         return "Estou com muitos pedidos no momento! (Cota de IA excedida). Tente novamente em alguns instantes.";
     }
     

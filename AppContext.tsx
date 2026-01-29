@@ -1,15 +1,14 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { MenuItem, Order, OrderStatus, UserRole, CartItem, LatLng, PaymentMethod, Driver, PixConfig, Review, SystemNotification } from '../types';
-import { INITIAL_MENU } from '../constants';
-import { saveMenuToDB, getMenuFromDB } from '../utils/db';
+import { MenuItem, Order, OrderStatus, UserRole, CartItem, LatLng, PaymentMethod, Driver, PixConfig, Review } from './types';
+import { INITIAL_MENU } from './constants';
+import { saveMenuToDB, getMenuFromDB } from './db';
 
 interface AppContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
   menu: MenuItem[];
   setMenu: (menu: MenuItem[]) => void;
-  isLoadingMenu: boolean;
+  isLoadingMenu: boolean; // New state exposed
   addMenuItem: (item: MenuItem) => void;
   removeMenuItem: (id: string) => void;
   cart: CartItem[];
@@ -25,19 +24,16 @@ interface AppContextType {
   updateMenuItem: (updatedItem: MenuItem) => void;
   isAdminLoggedIn: boolean;
   loginAdmin: (password: string) => boolean;
-  changeAdminPassword: (newPassword: string) => void;
-  resetAdminPassword: (recoveryKey: string) => boolean;
   logoutAdmin: () => void;
   driverLocation: LatLng;
   updateDriverLocation: (loc: LatLng) => void;
   pixConfig: PixConfig;
   setPixConfig: (config: PixConfig) => void;
   drivers: Driver[];
-  addDriver: (name: string, phone: string, password?: string, customId?: string) => void;
+  addDriver: (name: string, phone: string, password?: string) => void;
   removeDriver: (id: string) => void;
   reviews: Review[];
   addReview: (review: Review) => void;
-  lastNotification: SystemNotification | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -48,44 +44,41 @@ const INITIAL_DRIVER_LOCATION = { lat: -23.5505, lng: -46.6333 };
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   
-  // Initialize Menu with default constant, but data will be loaded asynchronously
+  // Initialize Menu with default constant, data will be loaded asynchronously
   const [menu, setMenu] = useState<MenuItem[]>(INITIAL_MENU);
-  const [isLoadingMenu, setIsLoadingMenu] = useState(true); 
+  const [isLoadingMenu, setIsLoadingMenu] = useState(true); // Start loading true
   const [isMenuLoaded, setIsMenuLoaded] = useState(false);
 
-  // Notifications State
-  const [lastNotification, setLastNotification] = useState<SystemNotification | null>(null);
-
-  const sendNotification = (targetRole: UserRole, message: string) => {
-    setLastNotification({
-      id: Math.random().toString(36),
-      message,
-      targetRole,
-      timestamp: Date.now()
-    });
-  };
-
-  // Load Menu Async from IndexedDB
+  // Load Menu Async (IndexedDB -> LocalStorage Fallback -> Default)
   useEffect(() => {
     const initMenu = async () => {
       setIsLoadingMenu(true);
       try {
+        // 1. Try IndexedDB (Preferred)
         const dbMenu = await getMenuFromDB();
-        
-        // Use DB data if it is a valid array (even if empty, meaning user deleted all items)
-        if (Array.isArray(dbMenu)) {
+        if (dbMenu && Array.isArray(dbMenu) && dbMenu.length > 0) {
           setMenu(dbMenu);
         } else {
-          // If DB is null (first run ever), save INITIAL_MENU to DB so we have a persistent start
-          console.log("Initializing DB with default menu");
-          await saveMenuToDB(INITIAL_MENU);
-          setMenu(INITIAL_MENU);
+          // 2. Try LocalStorage (Migration path)
+          const lsMenu = localStorage.getItem('entrega_local_menu');
+          if (lsMenu) {
+            try {
+              const parsed = JSON.parse(lsMenu);
+              setMenu(parsed);
+              // Migrate to DB
+              await saveMenuToDB(parsed);
+              // Clear LS to free space
+              localStorage.removeItem('entrega_local_menu'); 
+            } catch (e) {
+              console.error("Error migrating menu", e);
+            }
+          }
         }
       } catch (err) {
-        console.error("Initialization error - defaulting to constant", err);
+        console.error("Initialization error", err);
       } finally {
         setIsMenuLoaded(true);
-        setIsLoadingMenu(false);
+        setIsLoadingMenu(false); // Stop loading
       }
     };
     initMenu();
@@ -144,6 +137,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const saved = localStorage.getItem('entrega_local_drivers');
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Migration: ensure all drivers have a password
         return parsed.map((d: any) => ({ ...d, password: d.password || '1234' }));
       }
       return [
@@ -155,16 +149,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   });
 
-  const addDriver = (name: string, phone: string, password?: string, customId?: string) => {
-    const id = customId && customId.trim() !== '' 
-      ? customId.trim() 
-      : Math.floor(1000 + Math.random() * 9000).toString();
-
-    if (drivers.some(d => d.id === id)) {
-      alert("Erro: Já existe um entregador com este ID.");
-      return;
-    }
-
+  const addDriver = (name: string, phone: string, password?: string) => {
+    // Generate a simple numeric ID for easier login
+    const id = Math.floor(1000 + Math.random() * 9000).toString();
     const newDriver: Driver = { 
       id, 
       name, 
@@ -187,7 +174,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (e) { console.error("Failed to save drivers", e); }
   };
   
-  // Orders
+  // Initialize orders from localStorage
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('entrega_local_orders');
     if (saved) {
@@ -203,13 +190,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [adminPassword, setAdminPasswordState] = useState(() => {
-    return localStorage.getItem('entrega_local_admin_pass') || '1234';
-  });
-
   const [driverLocation, setDriverLocation] = useState<LatLng>(INITIAL_DRIVER_LOCATION);
 
-  // Persist orders
+  // Persist orders whenever they change
   useEffect(() => {
     try {
       localStorage.setItem('entrega_local_orders', JSON.stringify(orders));
@@ -218,7 +201,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [orders]);
 
-  // Sync Tabs
+  // LISTEN FOR LOCAL STORAGE CHANGES (Real-time Cross-Tab Sync)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'entrega_local_orders' && e.newValue) {
@@ -273,6 +256,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const updatedOrders = [newOrder, ...orders];
     setOrders(updatedOrders);
     
+    // Immediate save try
     try {
       localStorage.setItem('entrega_local_orders', JSON.stringify(updatedOrders));
     } catch (e) { console.error("Order Save Failed", e); }
@@ -282,38 +266,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) return;
-
-    const oldStatus = orders[orderIndex].status;
-    const updatedOrders = [...orders];
-    updatedOrders[orderIndex] = { ...updatedOrders[orderIndex], status };
-    
+    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status } : o);
     setOrders(updatedOrders);
-
-    // Notify Admin Logic
-    // If status changed to DELIVERING (Driver Accepted) OR DELIVERED (Driver Finished)
-    if (oldStatus !== status) {
-      const order = updatedOrders[orderIndex];
-      const driver = drivers.find(d => d.id === order.driverId);
-      const driverName = driver ? driver.name : 'Entregador';
-
-      if (status === OrderStatus.DELIVERING) {
-        sendNotification(UserRole.ADMIN, `🏍️ ${driverName} saiu para entrega do pedido #${order.id}`);
-      } else if (status === OrderStatus.DELIVERED) {
-        sendNotification(UserRole.ADMIN, `✅ Entrega do ${driverName} foi realizada! (Pedido #${order.id})`);
-      }
-    }
+    // Effect will handle save
   };
 
   const assignDriver = (orderId: string, driverId: string) => {
     const updatedOrders = orders.map(o => o.id === orderId ? { ...o, driverId, status: o.status === OrderStatus.PENDING ? OrderStatus.PREPARING : o.status } : o);
     setOrders(updatedOrders);
-    
-    // Notify Driver
-    const order = orders.find(o => o.id === orderId);
-    const orderNum = order ? order.id : '';
-    sendNotification(UserRole.DRIVER, `📦 Pedido #${orderNum} pronto para entrega!`);
   };
 
   const updateMenuItem = (updatedItem: MenuItem) => {
@@ -325,31 +285,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }
 
   const removeMenuItem = (id: string) => {
-    // Explicit filtering ensuring type compatibility
-    setMenu(prev => {
-        const filtered = prev.filter(item => String(item.id) !== String(id));
-        return filtered;
-    });
+    setMenu(prev => prev.filter(item => item.id !== id));
   }
 
   const loginAdmin = (password: string) => {
-    if (password === adminPassword) {
+    if (password === '1234') {
       setIsAdminLoggedIn(true);
-      return true;
-    }
-    return false;
-  };
-
-  const changeAdminPassword = (newPassword: string) => {
-    setAdminPasswordState(newPassword);
-    localStorage.setItem('entrega_local_admin_pass', newPassword);
-  };
-
-  const resetAdminPassword = (recoveryKey: string) => {
-    if (recoveryKey === 'master' || recoveryKey === 'admin123') {
-      const defaultPass = '1234';
-      setAdminPasswordState(defaultPass);
-      localStorage.setItem('entrega_local_admin_pass', defaultPass);
       return true;
     }
     return false;
@@ -371,12 +312,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cart, addToCart, removeFromCart, clearCart, isCartOpen, toggleCart,
       orders, placeOrder, updateOrderStatus, assignDriver,
       updateMenuItem,
-      isAdminLoggedIn, loginAdmin, changeAdminPassword, resetAdminPassword, logoutAdmin,
+      isAdminLoggedIn, loginAdmin, logoutAdmin,
       driverLocation, updateDriverLocation,
       pixConfig, setPixConfig,
       drivers, addDriver, removeDriver,
-      reviews, addReview,
-      lastNotification
+      reviews, addReview
     }}>
       {children}
     </AppContext.Provider>

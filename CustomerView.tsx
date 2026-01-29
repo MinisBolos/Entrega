@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from './AppContext';
 import { Plus, ShoppingCart, Trash2, CheckCircle, CreditCard, Banknote, QrCode, Copy, X, DollarSign, Loader2, Clock, ChefHat, Bike, MapPin, Info, Star, MessageSquare, Search, Filter } from 'lucide-react';
-import ChefBot from '../components/ChefBot';
-import { PaymentMethod, Order, OrderStatus, MenuItem, Review } from '../types';
-import { generatePixString } from '../utils/pix';
+import ChefBot from './ChefBot';
+import { PaymentMethod, Order, OrderStatus, MenuItem, Review } from './types';
+import { generatePixString } from './pix';
 
 const StarRating: React.FC<{ rating: number, size?: string }> = ({ rating, size = "w-3 h-3" }) => {
   return (
@@ -85,53 +84,6 @@ const CustomerView: React.FC = () => {
         setIsLoadingCep(false);
       }
     }
-  };
-
-  const handleUseLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocalização não é suportada pelo seu navegador.");
-      return;
-    }
-
-    setIsLoadingCep(true);
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-        const data = await response.json();
-        
-        if (data.address) {
-          const street = data.address.road || data.address.pedestrian || '';
-          const number = data.address.house_number || '';
-          const district = data.address.suburb || data.address.neighbourhood || '';
-          const city = data.address.city || data.address.town || data.address.municipality || '';
-          const state = data.address.state_district || data.address.state || '';
-          const postalCode = data.address.postcode || '';
-
-          const parts = [street, district, city, state].filter(Boolean);
-          const formattedAddress = parts.join(', ');
-          
-          setAddress(formattedAddress);
-          if (number) setAddressNumber(number);
-          if (postalCode) setCep(postalCode.replace(/\D/g, ''));
-        } else {
-            alert("Endereço não encontrado para esta localização.");
-        }
-      } catch (error) {
-        console.error("Erro ao obter endereço por GPS:", error);
-        alert("Não foi possível obter o endereço automaticamente.");
-      } finally {
-        setIsLoadingCep(false);
-      }
-    }, (error) => {
-      console.error("Erro de geolocalização:", error);
-      setIsLoadingCep(false);
-      let msg = "Erro ao obter localização.";
-      if (error.code === 1) msg = "Permissão de localização negada. Verifique as configurações do seu navegador.";
-      else if (error.code === 2) msg = "Localização indisponível.";
-      else if (error.code === 3) msg = "Tempo limite esgotado.";
-      alert(msg);
-    }, { enableHighAccuracy: true, timeout: 10000 });
   };
 
   const generateWhatsAppMessage = (order: Order) => {
@@ -456,17 +408,9 @@ const CustomerView: React.FC = () => {
                           value={cep}
                           onChange={e => setCep(e.target.value)}
                           onBlur={handleCepBlur}
-                          className="w-24 px-3 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                          className="w-28 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                         />
-                        <button
-                            type="button"
-                            onClick={handleUseLocation}
-                            disabled={isLoadingCep}
-                            className="p-3 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors"
-                            title="Usar localização atual"
-                        >
-                            {isLoadingCep ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
-                        </button>
+                        {isLoadingCep && <div className="absolute left-20 top-3"><Loader2 className="w-4 h-4 animate-spin text-orange-500"/></div>}
                         <input 
                           required 
                           type="text" 

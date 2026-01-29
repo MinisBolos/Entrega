@@ -1,3 +1,4 @@
+
 export enum UserRole {
   CUSTOMER = 'CUSTOMER',
   DRIVER = 'DRIVER',
@@ -75,4 +76,11 @@ export interface ChatMessage {
 export interface LatLng {
   lat: number;
   lng: number;
+}
+
+export interface SystemNotification {
+  id: string;
+  message: string;
+  targetRole: UserRole;
+  timestamp: number;
 }

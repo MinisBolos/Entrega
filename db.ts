@@ -19,7 +19,6 @@ export const openDB = (): Promise<IDBDatabase> => {
     };
 
     request.onerror = (event) => {
-      console.error("IndexedDB Open Error:", (event.target as IDBOpenDBRequest).error);
       reject((event.target as IDBOpenDBRequest).error);
     };
   });
@@ -33,20 +32,8 @@ export const saveMenuToDB = async (menu: any[]) => {
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put(menu, 'menu');
       
-      // Critical: Wait for transaction to complete, not just the request success
-      transaction.oncomplete = () => {
-        resolve();
-      };
-
-      transaction.onerror = (event) => {
-        console.error("IndexedDB Transaction Error:", event);
-        reject(transaction.error);
-      };
-      
-      request.onerror = (event) => {
-        console.error("IndexedDB Put Error:", request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
     });
   } catch (e) {
     console.error("Error saving to IndexedDB", e);
@@ -61,15 +48,8 @@ export const getMenuFromDB = async (): Promise<any[] | null> => {
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get('menu');
       
-      request.onsuccess = () => {
-        // request.result can be undefined if key doesn't exist
-        resolve(request.result === undefined ? null : request.result);
-      };
-      
-      request.onerror = () => {
-        console.error("IndexedDB Get Error:", request.error);
-        reject(request.error);
-      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
     });
   } catch (e) {
     console.error("Error reading from IndexedDB", e);

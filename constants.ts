@@ -4,7 +4,7 @@ export const INITIAL_MENU: MenuItem[] = [
   {
     id: '1',
     name: 'X-Burguer Supremo',
-    description: 'Hambúrguer artesanal de 180g, queijo cheddar derretido, bacon crocante e molho especial.',
+    description: 'Suculento hambúrguer artesanal de 180g, abraçado por cheddar derretido e a crocância irresistível do bacon. O sabor supremo que você merece!',
     price: 28.90,
     category: 'Lanches',
     imageUrl: 'https://picsum.photos/seed/burger/400/300'

@@ -1,5 +1,5 @@
 {
-  "name": "EntregaLocal AI",
+  "name": "Entrega Local",
   "description": "Um aplicativo completo de delivery local com cardápio inteligente, gestão de pedidos, área do entregador e painel administrativo com auxílio de IA.",
   "requestFramePermissions": [
     "geolocation"
