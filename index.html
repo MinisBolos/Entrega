@@ -12,9 +12,16 @@
       // Polyfill for process.env
       window.process = window.process || {};
       window.process.env = window.process.env || {};
+      
+      // --- CONFIGURAÇÃO DA CHAVE DE API (NETLIFY / STATIC) ---
+      // Como este é um app estático sem build step, as variáveis de ambiente do Netlify 
+      // NÃO são injetadas automaticamente no navegador.
+      // Cole sua chave abaixo para que a IA funcione.
+      
+      const NETLIFY_API_KEY = ""; // <--- COLE SUA API KEY AQUI (Ex: AIzaSy...)
+
       if (!window.process.env.API_KEY) {
-        // Fallback or empty, application logic should handle missing key if necessary
-        window.process.env.API_KEY = ''; 
+        window.process.env.API_KEY = NETLIFY_API_KEY || ''; 
       }
     </script>
     <style>

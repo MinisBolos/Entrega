@@ -282,12 +282,7 @@ const AdminView: React.FC = () => {
       const newDesc = await generateMenuDescription(editForm.name, hint);
       setEditForm(prev => ({ ...prev, description: newDesc }));
     } catch (error: any) {
-      console.error(error);
-      if (error.message === 'MISSING_API_KEY') {
-        alert('ERRO: Chave de API não configurada.\n\nAdicione a variável de ambiente API_KEY no painel do Netlify.');
-      } else {
-        alert('Erro ao gerar descrição. Verifique a conexão ou a chave de API.');
-      }
+      alert('Erro ao gerar descrição (Modo Demo pode estar com problemas).');
     } finally {
       setIsGenerating(false);
     }
@@ -302,15 +297,11 @@ const AdminView: React.FC = () => {
       if (base64Image) {
         setEditForm(prev => ({ ...prev, imageUrl: base64Image }));
       } else {
-        alert('A IA não retornou uma imagem válida. Tente mudar o nome do produto.');
+        alert('A IA (ou Modo Demo) não retornou uma imagem válida.');
       }
     } catch (error: any) {
       console.error(error);
-      if (error.message === 'MISSING_API_KEY') {
-        alert('ERRO CRÍTICO: Chave de API (API_KEY) não encontrada.\n\nNo Netlify, vá em "Site settings" > "Environment variables" e adicione "API_KEY".\nEm seguida, faça um novo Deploy.');
-      } else {
-        alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
-      }
+      alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsGeneratingImage(false);
     }
@@ -345,11 +336,7 @@ const AdminView: React.FC = () => {
       setNewProductForm(prev => ({ ...prev, description: newDesc }));
     } catch (error: any) {
       console.error(error);
-      if (error.message === 'MISSING_API_KEY') {
-        alert('ERRO: Chave de API ausente. Configure "API_KEY" no Netlify.');
-      } else {
-        alert('Erro ao gerar descrição: ' + error.message);
-      }
+      alert('Erro ao gerar descrição.');
     } finally {
       setIsGeneratingNewDesc(false);
     }
@@ -368,11 +355,7 @@ const AdminView: React.FC = () => {
       }
     } catch (error: any) {
       console.error(error);
-      if (error.message === 'MISSING_API_KEY') {
-        alert('ERRO CRÍTICO: Chave de API (API_KEY) não encontrada.\n\nNo Netlify, vá em "Site settings" > "Environment variables" e adicione "API_KEY".\nEm seguida, faça um novo Deploy.');
-      } else {
-        alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
-      }
+      alert(`Erro ao gerar imagem.`);
     } finally {
       setIsGeneratingNewImage(false);
     }
