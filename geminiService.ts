@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { MenuItem } from "./types";
 
@@ -15,7 +14,15 @@ const getAI = () => {
   return aiClient;
 };
 
+const checkApiKey = () => {
+  const key = process.env.API_KEY;
+  if (!key || key.trim() === '' || key.includes('YOUR_API_KEY')) {
+    throw new Error("MISSING_API_KEY");
+  }
+};
+
 export const generateMenuDescription = async (itemName: string, ingredients: string): Promise<string> => {
+  checkApiKey();
   try {
     const ai = getAI();
     const model = 'gemini-3-flash-preview';
@@ -29,12 +36,13 @@ export const generateMenuDescription = async (itemName: string, ingredients: str
     return response.text?.trim() || "Uma delícia preparada especialmente para você.";
   } catch (error) {
     console.warn("Falha na geração de descrição (API/Network):", error);
-    // Propagate error so admin UI can show specific messages (like Quota Exceeded)
+    // Propagate error so admin UI can show specific messages
     throw error;
   }
 };
 
 export const generateProductImage = async (itemName: string, description: string): Promise<string | null> => {
+  checkApiKey();
   try {
     const ai = getAI();
     // Using gemini-2.5-flash-image as per guidelines for general image generation
@@ -46,6 +54,11 @@ export const generateProductImage = async (itemName: string, description: string
       contents: {
         parts: [{ text: prompt }]
       },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
     });
 
     // Iterate to find inlineData (image)
@@ -67,6 +80,9 @@ export const generateProductImage = async (itemName: string, description: string
 };
 
 export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem[]): Promise<string> => {
+  // Recommendation shouldn't throw blocking error if key missing, just return fallback
+  if (!process.env.API_KEY) return "Olá! Recomendo dar uma olhada nos nossos Destaques!";
+
   try {
     const ai = getAI();
     const model = 'gemini-3-flash-preview';

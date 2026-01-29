@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { MenuItem } from "../types";
 
@@ -14,19 +15,15 @@ const getAI = () => {
   return aiClient;
 };
 
-// Helper to detect quota errors from various error object shapes
-const isQuotaError = (error: any): boolean => {
-  try {
-    const errStr = typeof error === 'object' 
-      ? JSON.stringify(error, Object.getOwnPropertyNames(error)) 
-      : String(error);
-    return errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('quota');
-  } catch (e) {
-    return false;
+const checkApiKey = () => {
+  const key = process.env.API_KEY;
+  if (!key || key.trim() === '' || key.includes('YOUR_API_KEY')) {
+    throw new Error("MISSING_API_KEY");
   }
 };
 
 export const generateMenuDescription = async (itemName: string, ingredients: string): Promise<string> => {
+  checkApiKey();
   try {
     const ai = getAI();
     const model = 'gemini-3-flash-preview';
@@ -39,17 +36,13 @@ export const generateMenuDescription = async (itemName: string, ingredients: str
 
     return response.text?.trim() || "Uma delícia preparada especialmente para você.";
   } catch (error) {
-    console.error("Falha na geração de descrição (API/Network):", error);
-    
-    if (isQuotaError(error)) {
-      throw new Error("QUOTA_EXCEEDED");
-    }
-    
+    console.warn("Falha na geração de descrição (API/Network):", error);
     throw error;
   }
 };
 
 export const generateProductImage = async (itemName: string, description: string): Promise<string | null> => {
+  checkApiKey();
   try {
     const ai = getAI();
     // Using gemini-2.5-flash-image as per guidelines for general image generation
@@ -61,6 +54,11 @@ export const generateProductImage = async (itemName: string, description: string
       contents: {
         parts: [{ text: prompt }]
       },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
     });
 
     // Iterate to find inlineData (image)
@@ -77,16 +75,14 @@ export const generateProductImage = async (itemName: string, description: string
     return null;
   } catch (error) {
     console.error("Falha na geração de imagem:", error);
-    
-    if (isQuotaError(error)) {
-      throw new Error("QUOTA_EXCEEDED");
-    }
-
     throw error;
   }
 };
 
 export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem[]): Promise<string> => {
+  // Recommendation shouldn't throw blocking error if key missing, just return fallback
+  if (!process.env.API_KEY) return "Olá! Recomendo dar uma olhada nos nossos Destaques!";
+
   try {
     const ai = getAI();
     const model = 'gemini-3-flash-preview';
@@ -118,7 +114,9 @@ export const getAIRecommendation = async (userQuery: string, menuItems: MenuItem
   } catch (error: any) {
     console.warn("Falha na recomendação (API/Network):", error);
     
-    if (isQuotaError(error)) {
+    // Check for Quota Exceeded error in various formats
+    const errStr = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+    if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED')) {
         return "Estou com muitos pedidos no momento! (Cota de IA excedida). Tente novamente em alguns instantes.";
     }
     

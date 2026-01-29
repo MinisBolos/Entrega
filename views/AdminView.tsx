@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateMenuDescription, generateProductImage } from '../services/geminiService';
-import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, EyeOff, Calendar, Filter, TrendingUp, ChefHat, CheckCircle, Bike, Printer, Info, Upload } from 'lucide-react';
-import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig, UserRole } from '../types';
+import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, Calendar, Filter, TrendingUp, ChefHat, CheckCircle, Bike } from 'lucide-react';
+import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig } from '../types';
 import { generatePixString } from '../utils/pix';
 
 // Declare Leaflet global
@@ -128,18 +127,6 @@ const AdminTrackingMap: React.FC<{ activeDeliveries: Order[] }> = ({ activeDeliv
   return <div ref={mapRef} className="w-full h-80 rounded-xl z-0" />;
 };
 
-// Generic Toast Component
-const Toast: React.FC<{ message: string; show: boolean; onClose: () => void; color?: string }> = ({ message, show, onClose, color = "bg-gray-800" }) => {
-  if (!show) return null;
-  return (
-    <div className={`fixed bottom-6 right-6 z-[300] ${color} text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right`}>
-      <Info className="w-6 h-6" />
-      <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full"><X className="w-4 h-4" /></button>
-    </div>
-  );
-};
-
 // Notification Component
 const NewOrderNotification: React.FC<{ 
   show: boolean; 
@@ -152,8 +139,8 @@ const NewOrderNotification: React.FC<{
   if (!show) return null;
 
   return (
-    <div className="fixed top-20 right-4 z-[200] animate-in slide-in-from-right duration-500 max-w-[90vw]">
-      <div className="bg-white border-l-4 border-orange-600 rounded-lg shadow-2xl p-4 w-full sm:w-80">
+    <div className="fixed top-20 right-4 z-[200] animate-in slide-in-from-right duration-500">
+      <div className="bg-white border-l-4 border-orange-600 rounded-lg shadow-2xl p-4 w-80">
         <div className="flex items-start justify-between mb-2">
           <div>
             <div className="flex items-center gap-2 text-orange-600 font-bold mb-1">
@@ -179,7 +166,7 @@ const NewOrderNotification: React.FC<{
 };
 
 const AdminView: React.FC = () => {
-  const { menu, updateMenuItem, addMenuItem, removeMenuItem, orders, updateOrderStatus, assignDriver, isAdminLoggedIn, pixConfig, setPixConfig, drivers, addDriver, removeDriver, changeAdminPassword, lastNotification } = useApp();
+  const { menu, updateMenuItem, addMenuItem, removeMenuItem, orders, updateOrderStatus, assignDriver, isAdminLoggedIn, pixConfig, setPixConfig, drivers, addDriver, removeDriver } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<MenuItem>>({});
   
@@ -200,14 +187,11 @@ const AdminView: React.FC = () => {
   
   // Settings State
   const [tempPixConfig, setTempPixConfig] = useState<PixConfig>(pixConfig);
-  const [newAdminPass, setNewAdminPass] = useState('');
   
   // Drivers State
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverPhone, setNewDriverPhone] = useState('');
   const [newDriverPassword, setNewDriverPassword] = useState('');
-  const [newDriverId, setNewDriverId] = useState('');
-  const [visiblePasswordDriverId, setVisiblePasswordDriverId] = useState<string | null>(null);
 
   // History Filter State
   const [historyStartDate, setHistoryStartDate] = useState('');
@@ -216,33 +200,14 @@ const AdminView: React.FC = () => {
 
   // Notification Logic
   const [notification, setNotification] = useState<{show: boolean, orderId: string, customerName: string, total: number} | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const prevOrdersRef = useRef<Order[]>(orders);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // File Upload Refs
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize Audio with Base64 for reliability
   useEffect(() => {
     audioRef.current = new Audio(NOTIFICATION_SOUND);
     audioRef.current.volume = 0.6;
   }, []);
-
-  // Listen for System Notifications (from Driver updates)
-  useEffect(() => {
-    if (lastNotification && lastNotification.targetRole === UserRole.ADMIN) {
-      setToastMessage(lastNotification.message);
-      // Play sound
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(console.error);
-      }
-      const timer = setTimeout(() => setToastMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastNotification]);
 
   // Watch for new orders
   useEffect(() => {
@@ -282,102 +247,6 @@ const AdminView: React.FC = () => {
     return <div className="p-8 text-center text-red-600">Acesso negado. Faça login.</div>;
   }
 
-  // --- Utility ---
-  const handleGeminiError = (error: any) => {
-    console.error("Handle Gemini Error:", error);
-    
-    // Check if it's the standardized Quota error from service
-    if (error instanceof Error && error.message === 'QUOTA_EXCEEDED') {
-       alert("⚠️ Limite de cota da IA atingido (Erro 429).\n\nO plano gratuito do Gemini tem limites de requisições por minuto/dia.\nPor favor, aguarde um momento antes de tentar novamente.");
-       return;
-    }
-
-    // Fallback parsing for other formats
-    const errString = typeof error === 'object' && error !== null
-      ? JSON.stringify(error, Object.getOwnPropertyNames(error)) 
-      : String(error);
-    
-    if (errString.includes('429') || errString.includes('RESOURCE_EXHAUSTED') || errString.includes('quota')) {
-      alert("⚠️ Limite de cota da IA atingido (Erro 429).\n\nO plano gratuito do Gemini tem limites de requisições por minuto/dia.\nPor favor, aguarde um momento antes de tentar novamente.");
-    } else {
-      alert("Erro ao conectar com a IA. Tente novamente mais tarde.");
-    }
-  };
-
-  // --- Printing Logic ---
-  const handlePrintOrder = (order: Order) => {
-    const printWindow = window.open('', '', 'height=600,width=400');
-    if (!printWindow) return;
-
-    const itemsHtml = order.items.map(item => `
-      <div class="item">
-        <span>${item.quantity}x ${item.name}</span>
-        <span>${(item.price * item.quantity).toFixed(2)}</span>
-      </div>
-    `).join('');
-
-    let paymentLabel: string = order.paymentMethod;
-    if (order.paymentMethod === 'PIX') paymentLabel = 'PIX';
-    if (order.paymentMethod === 'CASH') paymentLabel = 'DINHEIRO' + (order.changeFor ? ` (Troco p/ ${order.changeFor})` : '');
-    if (order.paymentMethod === 'CREDIT') paymentLabel = 'CARTÃO CRÉDITO';
-    if (order.paymentMethod === 'DEBIT') paymentLabel = 'CARTÃO DÉBITO';
-
-    const html = `
-      <html>
-        <head>
-          <title>Pedido #${order.id}</title>
-          <style>
-            body { font-family: 'Courier New', monospace; width: 100%; max-width: 300px; margin: 0 auto; padding: 10px; font-size: 12px; }
-            .header { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 14px; }
-            .divider { border-bottom: 1px dashed #000; margin: 8px 0; }
-            .info { margin-bottom: 5px; }
-            .item { display: flex; justify-content: space-between; margin-bottom: 3px; }
-            .total { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 10px; }
-            .footer { text-align: center; margin-top: 15px; font-size: 10px; }
-            @media print {
-              @page { margin: 0; size: auto; }
-              body { padding: 0; width: 100%; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            ENTREGA LOCAL APP<br/>
-            Pedido #${order.id}
-          </div>
-          <div class="info">Data: ${order.createdAt.toLocaleDateString()} ${order.createdAt.toLocaleTimeString()}</div>
-          <div class="info">Cliente: ${order.customerName}</div>
-          <div class="info">Tel: --</div>
-          <div class="divider"></div>
-          <div class="info">
-            Endereço:<br/>
-            ${order.address}, ${order.addressNumber}<br/>
-            ${order.referencePoint ? `Obs: ${order.referencePoint}` : ''}
-          </div>
-          <div class="divider"></div>
-          ${itemsHtml}
-          <div class="divider"></div>
-          <div class="total">
-            <span>TOTAL:</span>
-            <span>R$ ${order.total.toFixed(2)}</span>
-          </div>
-          <div class="info" style="margin-top:5px;">Pagamento: ${paymentLabel}</div>
-          <div class="footer">Obrigado pela preferência!</div>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    
-    // Slight delay to ensure styles load
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
-
   // --- Edit Logic ---
   const startEdit = (item: MenuItem) => {
     setEditingId(item.id);
@@ -400,7 +269,6 @@ const AdminView: React.FC = () => {
 
   const handleDeleteProduct = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    e.preventDefault();
     if (window.confirm("Tem certeza que deseja excluir este produto do cardápio?")) {
       removeMenuItem(id);
     }
@@ -413,8 +281,13 @@ const AdminView: React.FC = () => {
       const hint = editForm.description || "ingredientes frescos";
       const newDesc = await generateMenuDescription(editForm.name, hint);
       setEditForm(prev => ({ ...prev, description: newDesc }));
-    } catch (e) {
-      handleGeminiError(e);
+    } catch (error: any) {
+      console.error(error);
+      if (error.message === 'MISSING_API_KEY') {
+        alert('ERRO: Chave de API não configurada.\n\nAdicione a variável de ambiente API_KEY no painel do Netlify.');
+      } else {
+        alert('Erro ao gerar descrição. Verifique a conexão ou a chave de API.');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -429,36 +302,17 @@ const AdminView: React.FC = () => {
       if (base64Image) {
         setEditForm(prev => ({ ...prev, imageUrl: base64Image }));
       } else {
-        alert('Não foi possível gerar a imagem. Verifique a chave de API.');
+        alert('A IA não retornou uma imagem válida. Tente mudar o nome do produto.');
       }
-    } catch(e) {
-      handleGeminiError(e);
+    } catch (error: any) {
+      console.error(error);
+      if (error.message === 'MISSING_API_KEY') {
+        alert('ERRO CRÍTICO: Chave de API (API_KEY) não encontrada.\n\nNo Netlify, vá em "Site settings" > "Environment variables" e adicione "API_KEY".\nEm seguida, faça um novo Deploy.');
+      } else {
+        alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
+      }
     } finally {
       setIsGeneratingImage(false);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean = false) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Limit file size to 5MB to avoid storage issues
-      if (file.size > 5 * 1024 * 1024) {
-        alert("A imagem é muito grande. Escolha uma imagem menor que 5MB.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        if (isEdit) {
-          setEditForm(prev => ({ ...prev, imageUrl: result }));
-        } else {
-          setNewProductForm(prev => ({ ...prev, imageUrl: result }));
-        }
-      };
-      reader.readAsDataURL(file);
-      // Reset input value to allow selecting same file again
-      e.target.value = '';
     }
   };
 
@@ -489,8 +343,13 @@ const AdminView: React.FC = () => {
       const hint = newProductForm.description || "delicioso e fresco";
       const newDesc = await generateMenuDescription(newProductForm.name, hint);
       setNewProductForm(prev => ({ ...prev, description: newDesc }));
-    } catch (e) {
-      handleGeminiError(e);
+    } catch (error: any) {
+      console.error(error);
+      if (error.message === 'MISSING_API_KEY') {
+        alert('ERRO: Chave de API ausente. Configure "API_KEY" no Netlify.');
+      } else {
+        alert('Erro ao gerar descrição: ' + error.message);
+      }
     } finally {
       setIsGeneratingNewDesc(false);
     }
@@ -507,8 +366,13 @@ const AdminView: React.FC = () => {
       } else {
         alert('Não foi possível gerar a imagem.');
       }
-    } catch(e) {
-      handleGeminiError(e);
+    } catch (error: any) {
+      console.error(error);
+      if (error.message === 'MISSING_API_KEY') {
+        alert('ERRO CRÍTICO: Chave de API (API_KEY) não encontrada.\n\nNo Netlify, vá em "Site settings" > "Environment variables" e adicione "API_KEY".\nEm seguida, faça um novo Deploy.');
+      } else {
+        alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
+      }
     } finally {
       setIsGeneratingNewImage(false);
     }
@@ -523,26 +387,15 @@ const AdminView: React.FC = () => {
     alert("Configurações Pix Salvas!");
   };
 
-  const handleUpdateAdminPassword = () => {
-    if (newAdminPass.length < 4) {
-      alert("A senha deve ter pelo menos 4 caracteres.");
-      return;
-    }
-    changeAdminPassword(newAdminPass);
-    setNewAdminPass('');
-    alert("Senha de administrador atualizada com sucesso!");
-  };
-
   const handleAddDriver = (e: React.FormEvent) => {
     e.preventDefault();
     if(newDriverName && newDriverPhone && newDriverPassword) {
-      addDriver(newDriverName, newDriverPhone, newDriverPassword, newDriverId);
+      addDriver(newDriverName, newDriverPhone, newDriverPassword);
       setNewDriverName('');
       setNewDriverPhone('');
       setNewDriverPassword('');
-      setNewDriverId('');
     } else {
-      alert("Preencha todos os campos obrigatórios do entregador.");
+      alert("Preencha todos os campos do entregador.");
     }
   };
 
@@ -600,17 +453,17 @@ const AdminView: React.FC = () => {
   const getOrderStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-yellow-100 text-yellow-800 whitespace-nowrap"><Clock className="w-3 h-3" /> Pendente</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3" /> Pendente</span>;
       case OrderStatus.PREPARING:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-800 whitespace-nowrap"><ChefHat className="w-3 h-3 animate-pulse" /> Em Preparação</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-800"><ChefHat className="w-3 h-3 animate-pulse" /> Em Preparação</span>;
       case OrderStatus.READY:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-indigo-100 text-indigo-800 whitespace-nowrap"><CheckCircle className="w-3 h-3" /> Aguardando Entregador</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-indigo-100 text-indigo-800"><CheckCircle className="w-3 h-3" /> Aguardando Entregador</span>;
       case OrderStatus.DELIVERING:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-orange-100 text-orange-800 whitespace-nowrap"><Bike className="w-3 h-3 animate-bounce" /> Em Rota de Entrega</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-orange-100 text-orange-800"><Bike className="w-3 h-3 animate-bounce" /> Em Rota de Entrega</span>;
       case OrderStatus.DELIVERED:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-gray-200 text-gray-800 whitespace-nowrap">Entregue</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-gray-200 text-gray-800">Entregue</span>;
       case OrderStatus.CANCELLED:
-        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-800 whitespace-nowrap">Cancelado</span>;
+        return <span className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-bold bg-red-100 text-red-800">Cancelado</span>;
       default:
         return null;
     }
@@ -631,121 +484,85 @@ const AdminView: React.FC = () => {
         />
       )}
 
-      {/* Driver Update Toast */}
-      <Toast 
-        show={!!toastMessage} 
-        message={toastMessage || ''} 
-        onClose={() => setToastMessage(null)} 
-        color="bg-blue-900"
-      />
-
       {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto gap-2 border-b border-gray-200 pb-2 mb-6 no-scrollbar">
-        <button onClick={() => setViewSection('ORDERS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap flex-shrink-0 ${viewSection === 'ORDERS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+      <div className="flex overflow-x-auto gap-2 border-b border-gray-200 pb-2 mb-6">
+        <button onClick={() => setViewSection('ORDERS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap ${viewSection === 'ORDERS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           Gerenciar Pedidos
         </button>
-        <button onClick={() => setViewSection('MENU')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap flex-shrink-0 ${viewSection === 'MENU' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => setViewSection('MENU')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap ${viewSection === 'MENU' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           Cardápio
         </button>
-        <button onClick={() => setViewSection('DRIVERS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap flex-shrink-0 ${viewSection === 'DRIVERS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <button onClick={() => setViewSection('DRIVERS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap ${viewSection === 'DRIVERS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
           Entregadores
         </button>
-        <button onClick={() => setViewSection('SETTINGS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap flex-shrink-0 ${viewSection === 'SETTINGS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-          Configurações
+        <button onClick={() => setViewSection('SETTINGS')} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap ${viewSection === 'SETTINGS' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          Configurações (Pix)
         </button>
       </div>
 
-      {/* SETTINGS SECTION (PIX & ADMIN) */}
+      {/* SETTINGS SECTION (PIX) */}
       {viewSection === 'SETTINGS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-              <Settings className="w-6 h-6 text-gray-600" /> Pagamento Pix
-            </h2>
+        <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm max-w-2xl">
+          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <Settings className="w-6 h-6 text-gray-600" /> Configuração de Pagamento Pix
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Chave Pix</label>
+              <input 
+                type="text" 
+                value={tempPixConfig.key} 
+                onChange={e => setTempPixConfig({...tempPixConfig, key: e.target.value})}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
+                placeholder="CPF, Email ou Aleatória"
+              />
+            </div>
             
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Chave Pix</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Banco</label>
                 <input 
                   type="text" 
-                  value={tempPixConfig.key} 
-                  onChange={e => setTempPixConfig({...tempPixConfig, key: e.target.value})}
+                  value={tempPixConfig.bankName} 
+                  onChange={e => setTempPixConfig({...tempPixConfig, bankName: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
-                  placeholder="CPF, Email ou Aleatória"
+                  placeholder="Ex: Nubank"
                 />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Banco</label>
-                  <input 
-                    type="text" 
-                    value={tempPixConfig.bankName} 
-                    onChange={e => setTempPixConfig({...tempPixConfig, bankName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
-                    placeholder="Ex: Nubank"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Responsável</label>
-                  <input 
-                    type="text" 
-                    value={tempPixConfig.holderName} 
-                    onChange={e => setTempPixConfig({...tempPixConfig, holderName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
-                    placeholder="Nome Completo"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-6 mt-6 border border-gray-100 flex-wrap">
-                 <div className="bg-white p-2 rounded shadow-sm">
-                   <img 
-                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(previewPixString)}`} 
-                     alt="Preview QR" 
-                     className="w-24 h-24 mix-blend-multiply"
-                   />
-                 </div>
-                 <div>
-                   <p className="font-bold text-gray-800 text-sm mb-1">QR Code Gerado por IA</p>
-                   <p className="text-xs text-gray-500">Este QR Code será exibido automaticamente para o cliente ao selecionar Pix.</p>
-                 </div>
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <button onClick={saveSettings} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2">
-                  <Save className="w-4 h-4" /> Salvar Pix
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
-            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-              <Key className="w-6 h-6 text-blue-600" /> Segurança do Administrador
-            </h2>
-            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Nova Senha de Administrador</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Responsável</label>
                 <input 
-                  type="password" 
-                  value={newAdminPass} 
-                  onChange={e => setNewAdminPass(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Digite a nova senha"
+                  type="text" 
+                  value={tempPixConfig.holderName} 
+                  onChange={e => setTempPixConfig({...tempPixConfig, holderName: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 outline-none"
+                  placeholder="Nome Completo"
                 />
               </div>
-              <div className="flex justify-end pt-2">
-                <button onClick={handleUpdateAdminPassword} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2">
-                   <Key className="w-4 h-4" /> Alterar Senha
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Atenção: Ao alterar a senha, você precisará usá-la no próximo login.
-              </p>
             </div>
-          </section>
-        </div>
+
+            <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-6 mt-6 border border-gray-100">
+               <div className="bg-white p-2 rounded shadow-sm">
+                 <img 
+                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(previewPixString)}`} 
+                   alt="Preview QR" 
+                   className="w-24 h-24 mix-blend-multiply"
+                 />
+               </div>
+               <div>
+                 <p className="font-bold text-gray-800 text-sm mb-1">QR Code Gerado por IA</p>
+                 <p className="text-xs text-gray-500">Este QR Code será exibido automaticamente para o cliente ao selecionar Pix.</p>
+               </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button onClick={saveSettings} className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2">
+                <Save className="w-4 h-4" /> Salvar Configurações
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* DRIVERS SECTION */}
@@ -766,13 +583,6 @@ const AdminView: React.FC = () => {
                 />
                 <input 
                   type="text" 
-                  placeholder="ID Personalizado (Opcional)" 
-                  value={newDriverId}
-                  onChange={e => setNewDriverId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-                <input 
-                  type="text" 
                   placeholder="Telefone / WhatsApp" 
                   required
                   value={newDriverPhone}
@@ -780,8 +590,8 @@ const AdminView: React.FC = () => {
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <input 
-                  type="text" 
-                  placeholder="Criar Senha de Acesso" 
+                  type="password" 
+                  placeholder="Senha de Acesso" 
                   required
                   value={newDriverPassword}
                   onChange={e => setNewDriverPassword(e.target.value)}
@@ -800,29 +610,15 @@ const AdminView: React.FC = () => {
               <div className="space-y-2">
                 {drivers.length === 0 ? <p className="text-gray-500 italic">Nenhum entregador cadastrado.</p> : 
                   drivers.map(driver => (
-                    <div key={driver.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 group gap-3">
+                    <div key={driver.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100 group">
                       <div>
                         <div className="flex items-center gap-2">
                            <p className="font-bold text-gray-800">{driver.name}</p>
-                           <span className="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded font-mono font-bold">ID: {driver.id}</span>
+                           <span className="bg-gray-200 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-mono">ID: {driver.id}</span>
                         </div>
                         <p className="text-xs text-gray-500">{driver.phone}</p>
-                        
-                        {/* Driver Credentials View */}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-400 font-mono">
-                            Senha: {visiblePasswordDriverId === driver.id ? driver.password : '••••••'}
-                          </span>
-                          <button 
-                            type="button"
-                            onClick={() => setVisiblePasswordDriverId(visiblePasswordDriverId === driver.id ? null : driver.id)}
-                            className="text-gray-400 hover:text-blue-600"
-                          >
-                             {visiblePasswordDriverId === driver.id ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                          </button>
-                        </div>
                       </div>
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <div className="flex items-center gap-2">
                         <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">Ativo</span>
                         <button 
                           onClick={() => removeDriver(driver.id)}
@@ -850,7 +646,7 @@ const AdminView: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                   <MapIcon className="w-6 h-6 text-blue-600" /> Monitoramento em Tempo Real
                 </h2>
-                <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold flex items-center gap-1 whitespace-nowrap">
+                <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold flex items-center gap-1">
                   <RefreshCcw className="w-3 h-3 animate-spin" /> Ao Vivo
                 </span>
               </div>
@@ -938,7 +734,7 @@ const AdminView: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
                     <div>
                       <p className="text-gray-500 text-xs font-bold uppercase">Total de Pedidos</p>
@@ -975,17 +771,7 @@ const AdminView: React.FC = () => {
                     >
                       <div className="flex justify-between items-center mb-3 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                         <span className="font-bold text-lg">#{order.id}</span>
-                        <div className="flex items-center gap-2">
-                           {/* Print Button */}
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); handlePrintOrder(order); }}
-                             className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                             title="Imprimir Cupom"
-                           >
-                             <Printer className="w-4 h-4" />
-                           </button>
-                           {getOrderStatusBadge(order.status)}
-                        </div>
+                        {getOrderStatusBadge(order.status)}
                       </div>
                       <div className="mb-4 text-sm text-gray-600">
                           <div className="flex justify-between items-start">
@@ -1006,13 +792,13 @@ const AdminView: React.FC = () => {
                                    </label>
                                    <div className="flex gap-2">
                                      <select 
-                                       className="flex-1 text-xs border border-gray-300 rounded p-1.5 bg-gray-50 outline-none focus:border-orange-500 w-full"
+                                       className="flex-1 text-xs border border-gray-300 rounded p-1.5 bg-gray-50 outline-none focus:border-orange-500"
                                        value={order.driverId || ''}
                                        onChange={(e) => assignDriver(order.id, e.target.value)}
                                      >
                                        <option value="">{order.status === OrderStatus.DELIVERING ? 'Em rota...' : '-- Aguardando Coleta --'}</option>
                                        {drivers.map(d => (
-                                         <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
+                                         <option key={d.id} value={d.id}>{d.name}</option>
                                        ))}
                                      </select>
                                    </div>
@@ -1025,7 +811,7 @@ const AdminView: React.FC = () => {
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
                               <div className="mb-3 border-b border-gray-200 pb-2">
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Endereço de Entrega</p>
-                                <p className="text-sm font-medium text-gray-800 break-words">{order.address}, {order.addressNumber}</p>
+                                <p className="text-sm font-medium text-gray-800">{order.address}, {order.addressNumber}</p>
                                 {order.cep && <p className="text-xs text-gray-500 mt-0.5">CEP: {order.cep}</p>}
                               </div>
                               <ul className="space-y-1">
@@ -1048,26 +834,26 @@ const AdminView: React.FC = () => {
                       </div>
                       
                       {activeTab === 'ACTIVE' && (
-                        <div className="flex flex-wrap gap-2 border-t pt-3">
+                        <div className="flex gap-2 border-t pt-3">
                             {order.status === OrderStatus.PENDING && (
-                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.PREPARING)} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-green-700 flex items-center justify-center gap-2 min-w-[120px]">
-                                <Check className="w-4 h-4" /> Aceitar
+                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.PREPARING)} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-green-700 flex items-center justify-center gap-2">
+                                <Check className="w-4 h-4" /> Aceitar Pedido
                               </button>
                             )}
                             {order.status === OrderStatus.PREPARING && (
-                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.READY)} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2 min-w-[120px]">
-                                <ChefHat className="w-4 h-4" /> Pronto
+                              <button onClick={() => updateOrderStatus(order.id, OrderStatus.READY)} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2">
+                                <ChefHat className="w-4 h-4" /> Marcar como Pronto
                               </button>
                             )}
                              {/* If Ready, we wait for driver or manual assign. If Delivering, we show info */}
                             {order.status === OrderStatus.READY && (
-                               <div className="flex-1 bg-gray-100 text-gray-500 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide min-w-[120px]">
+                               <div className="flex-1 bg-gray-100 text-gray-500 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide">
                                   <Clock className="w-4 h-4" /> Aguardando Coleta
-                                </div>
+                               </div>
                             )}
                             {order.status === OrderStatus.DELIVERING && (
-                               <div className="flex-1 bg-orange-100 text-orange-600 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide min-w-[120px]">
-                                  <Bike className="w-4 h-4" /> Em Rota
+                               <div className="flex-1 bg-orange-100 text-orange-600 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 uppercase tracking-wide">
+                                  <Bike className="w-4 h-4" /> Em Rota de Entrega
                                </div>
                             )}
 
@@ -1178,26 +964,10 @@ const AdminView: React.FC = () => {
                             value={newProductForm.imageUrl}
                             onChange={e => setNewProductForm({...newProductForm, imageUrl: e.target.value})}
                           />
-                          {/* File Input for New Product */}
-                          <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden" 
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, false)} 
-                          />
-                          <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="bg-gray-200 text-gray-700 px-3 rounded hover:bg-gray-300 flex items-center gap-1 text-sm font-medium"
-                            title="Upload do dispositivo"
-                          >
-                            <Upload className="w-4 h-4" /> Upload
-                          </button>
-                          
                           <button 
                              onClick={handleMagicImageNew}
                              disabled={isGeneratingNewImage || !newProductForm.name}
-                             className="bg-purple-600 text-white px-3 rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1 text-sm font-medium whitespace-nowrap"
+                             className="bg-purple-600 text-white px-3 rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1 text-sm font-medium"
                           >
                             {isGeneratingNewImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                             Gerar Foto
@@ -1215,21 +985,13 @@ const AdminView: React.FC = () => {
             )}
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 overflow-x-auto">
-            {/* Helper File Input for Edit Mode (One instance re-used) */}
-            <input 
-              type="file" 
-              ref={editFileInputRef} 
-              className="hidden" 
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, true)} 
-            />
+          <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">Descrição</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Preço (R$)</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/3">Descrição</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preço (R$)</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
                 </tr>
               </thead>
@@ -1238,7 +1000,7 @@ const AdminView: React.FC = () => {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 whitespace-nowrap">
                       {editingId === item.id ? (
-                        <div className="space-y-2 min-w-[150px]">
+                        <div className="space-y-2">
                            <input
                             type="text"
                             placeholder="Nome"
@@ -1247,7 +1009,7 @@ const AdminView: React.FC = () => {
                             className="border border-gray-300 rounded px-2 py-1 w-full text-sm"
                           />
                           <div className="flex items-center gap-1">
-                             <ImageIcon className="w-3 h-3 text-gray-400 shrink-0" />
+                             <ImageIcon className="w-3 h-3 text-gray-400" />
                              <input
                               type="text"
                               placeholder="URL da Imagem"
@@ -1256,16 +1018,9 @@ const AdminView: React.FC = () => {
                               className="border border-gray-300 rounded px-2 py-1 w-full text-xs"
                             />
                             <button
-                               onClick={() => editFileInputRef.current?.click()}
-                               className="bg-gray-100 text-gray-600 p-1.5 rounded hover:bg-gray-200 shrink-0"
-                               title="Fazer Upload de Imagem"
-                            >
-                               <Upload className="w-3 h-3" />
-                            </button>
-                            <button
                                onClick={handleMagicImage}
                                disabled={isGeneratingImage || !editForm.name}
-                               className="bg-purple-100 text-purple-700 p-1.5 rounded hover:bg-purple-200 disabled:opacity-50 shrink-0"
+                               className="bg-purple-100 text-purple-700 p-1.5 rounded hover:bg-purple-200 disabled:opacity-50"
                                title="Gerar Imagem com IA"
                              >
                                {isGeneratingImage ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -1273,15 +1028,15 @@ const AdminView: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center min-w-[150px]">
+                        <div className="flex items-center">
                           <img className="h-8 w-8 rounded-full object-cover mr-3" src={item.imageUrl} alt="" />
-                          <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]" title={item.name}>{item.name}</div>
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-2">
                       {editingId === item.id ? (
-                        <div className="flex flex-col gap-2 min-w-[200px]">
+                        <div className="flex flex-col gap-2">
                           <textarea
                             value={editForm.description}
                             onChange={e => setEditForm({...editForm, description: e.target.value})}
@@ -1298,7 +1053,7 @@ const AdminView: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-500 line-clamp-2 min-w-[200px]">{item.description}</div>
+                        <div className="text-xs text-gray-500 line-clamp-2">{item.description}</div>
                       )}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap">
