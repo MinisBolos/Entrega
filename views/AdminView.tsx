@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateMenuDescription, generateProductImage } from '../services/geminiService';
-import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, Calendar, Filter, TrendingUp, ChefHat, CheckCircle, Bike } from 'lucide-react';
+import { Edit2, Save, Sparkles, X, Check, ChevronDown, ChevronUp, Map as MapIcon, RefreshCcw, CreditCard, Banknote, QrCode, DollarSign, Archive, Clock, Key, Settings, Users, UserPlus, Truck, ImageIcon, Loader2, PlusCircle, Trash2, Bell, ExternalLink, Eye, Calendar, Filter, TrendingUp, ChefHat, CheckCircle, Bike, Upload, Download } from 'lucide-react';
 import { MenuItem, OrderStatus, Order, PaymentMethod, PixConfig } from '../types';
 import { generatePixString } from '../utils/pix';
 
@@ -247,6 +248,29 @@ const AdminView: React.FC = () => {
     return <div className="p-8 text-center text-red-600">Acesso negado. Faça login.</div>;
   }
 
+  // --- Helpers ---
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Limit file size to 5MB to avoid clogging IndexedDB
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Imagem muito grande! Por favor escolha uma imagem menor que 5MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (isEdit) {
+          setEditForm(prev => ({ ...prev, imageUrl: base64String }));
+        } else {
+          setNewProductForm(prev => ({ ...prev, imageUrl: base64String }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // --- Edit Logic ---
   const startEdit = (item: MenuItem) => {
     setEditingId(item.id);
@@ -277,34 +301,23 @@ const AdminView: React.FC = () => {
   const handleMagicWrite = async () => {
     if (!editForm.name) return;
     setIsGenerating(true);
-    try {
-      const hint = editForm.description || "ingredientes frescos";
-      const newDesc = await generateMenuDescription(editForm.name, hint);
-      setEditForm(prev => ({ ...prev, description: newDesc }));
-    } catch (error: any) {
-      alert('Erro ao gerar descrição (Modo Demo pode estar com problemas).');
-    } finally {
-      setIsGenerating(false);
-    }
+    const hint = editForm.description || "ingredientes frescos";
+    const newDesc = await generateMenuDescription(editForm.name, hint);
+    setEditForm(prev => ({ ...prev, description: newDesc }));
+    setIsGenerating(false);
   };
 
   const handleMagicImage = async () => {
     if (!editForm.name) return;
     setIsGeneratingImage(true);
-    try {
-      const desc = editForm.description || editForm.name;
-      const base64Image = await generateProductImage(editForm.name, desc);
-      if (base64Image) {
-        setEditForm(prev => ({ ...prev, imageUrl: base64Image }));
-      } else {
-        alert('A IA (ou Modo Demo) não retornou uma imagem válida.');
-      }
-    } catch (error: any) {
-      console.error(error);
-      alert(`Erro ao gerar imagem: ${error.message || 'Erro desconhecido'}`);
-    } finally {
-      setIsGeneratingImage(false);
+    const desc = editForm.description || editForm.name;
+    const base64Image = await generateProductImage(editForm.name, desc);
+    if (base64Image) {
+      setEditForm(prev => ({ ...prev, imageUrl: base64Image }));
+    } else {
+      alert('Não foi possível gerar a imagem. Tente novamente.');
     }
+    setIsGeneratingImage(false);
   };
 
   // --- Create Logic ---
@@ -330,35 +343,23 @@ const AdminView: React.FC = () => {
   const handleMagicWriteNew = async () => {
     if (!newProductForm.name) return;
     setIsGeneratingNewDesc(true);
-    try {
-      const hint = newProductForm.description || "delicioso e fresco";
-      const newDesc = await generateMenuDescription(newProductForm.name, hint);
-      setNewProductForm(prev => ({ ...prev, description: newDesc }));
-    } catch (error: any) {
-      console.error(error);
-      alert('Erro ao gerar descrição.');
-    } finally {
-      setIsGeneratingNewDesc(false);
-    }
+    const hint = newProductForm.description || "delicioso e fresco";
+    const newDesc = await generateMenuDescription(newProductForm.name, hint);
+    setNewProductForm(prev => ({ ...prev, description: newDesc }));
+    setIsGeneratingNewDesc(false);
   };
 
   const handleMagicImageNew = async () => {
     if (!newProductForm.name) return;
     setIsGeneratingNewImage(true);
-    try {
-      const desc = newProductForm.description || newProductForm.name;
-      const base64Image = await generateProductImage(newProductForm.name, desc);
-      if (base64Image) {
-        setNewProductForm(prev => ({ ...prev, imageUrl: base64Image }));
-      } else {
-        alert('Não foi possível gerar a imagem.');
-      }
-    } catch (error: any) {
-      console.error(error);
-      alert(`Erro ao gerar imagem.`);
-    } finally {
-      setIsGeneratingNewImage(false);
+    const desc = newProductForm.description || newProductForm.name;
+    const base64Image = await generateProductImage(newProductForm.name, desc);
+    if (base64Image) {
+      setNewProductForm(prev => ({ ...prev, imageUrl: base64Image }));
+    } else {
+      alert('Não foi possível gerar a imagem.');
     }
+    setIsGeneratingNewImage(false);
   };
 
   const toggleOrder = (orderId: string) => {
@@ -420,6 +421,43 @@ const AdminView: React.FC = () => {
 
     return true;
   });
+
+  const handleExportCSV = () => {
+    if (filteredHistoryOrders.length === 0) {
+      alert("Nenhum pedido para exportar.");
+      return;
+    }
+
+    // CSV Headers
+    const headers = ['ID', 'Data', 'Status', 'Cliente', 'Endereco', 'Pagamento', 'Total', 'Itens'];
+
+    // Convert data to CSV format
+    const rows = filteredHistoryOrders.map(order => {
+      // Helper to escape CSV fields (quotes inside strings)
+      const escape = (str: string) => `"${str.replace(/"/g, '""')}"`;
+
+      return [
+        order.id,
+        new Date(order.createdAt).toLocaleString(),
+        order.status,
+        escape(order.customerName),
+        escape(`${order.address}, ${order.addressNumber}`),
+        order.paymentMethod,
+        order.total.toFixed(2),
+        escape(order.items.map(i => `${i.quantity}x ${i.name}`).join('; '))
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `relatorio_pedidos_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const displayedOrders = activeTab === 'ACTIVE' ? activeOrders : filteredHistoryOrders;
   
@@ -703,18 +741,27 @@ const AdminView: React.FC = () => {
                       </select>
                     </div>
                   </div>
-                  {(historyStartDate || historyEndDate || historyStatusFilter !== 'ALL') && (
+                  <div className="flex items-end gap-2">
                     <button 
-                      onClick={() => {
-                        setHistoryStartDate('');
-                        setHistoryEndDate('');
-                        setHistoryStatusFilter('ALL');
-                      }}
-                      className="text-red-500 text-xs font-bold hover:underline mb-2 md:mb-0"
+                       onClick={handleExportCSV}
+                       className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-green-700 flex items-center gap-1 h-[38px] whitespace-nowrap"
+                       title="Baixar CSV"
                     >
-                      Limpar Filtros
+                      <Download className="w-4 h-4" /> Exportar
                     </button>
-                  )}
+                    {(historyStartDate || historyEndDate || historyStatusFilter !== 'ALL') && (
+                      <button 
+                        onClick={() => {
+                          setHistoryStartDate('');
+                          setHistoryEndDate('');
+                          setHistoryStatusFilter('ALL');
+                        }}
+                        className="text-red-500 text-xs font-bold hover:underline mb-2 md:mb-2 ml-1"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -939,21 +986,26 @@ const AdminView: React.FC = () => {
                        </div>
                      </div>
                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Imagem URL</label>
-                        <div className="flex gap-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Imagem URL ou Upload</label>
+                        <div className="flex gap-2 items-center">
                           <input 
                             type="text" 
                             className="flex-1 border border-gray-300 rounded px-3 py-2 outline-none focus:border-orange-500 text-sm"
                             value={newProductForm.imageUrl}
                             onChange={e => setNewProductForm({...newProductForm, imageUrl: e.target.value})}
+                            placeholder="http://... ou carregue um arquivo"
                           />
+                          <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded border border-gray-300" title="Carregar imagem do dispositivo">
+                            <Upload className="w-5 h-5" />
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, false)} />
+                          </label>
                           <button 
                              onClick={handleMagicImageNew}
                              disabled={isGeneratingNewImage || !newProductForm.name}
-                             className="bg-purple-600 text-white px-3 rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1 text-sm font-medium"
+                             className="bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-700 disabled:opacity-50 flex items-center gap-1 text-sm font-medium"
+                             title="Gerar imagem com IA"
                           >
                             {isGeneratingNewImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                            Gerar Foto
                           </button>
                         </div>
                      </div>
@@ -1000,6 +1052,10 @@ const AdminView: React.FC = () => {
                               onChange={e => setEditForm({...editForm, imageUrl: e.target.value})}
                               className="border border-gray-300 rounded px-2 py-1 w-full text-xs"
                             />
+                            <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded border border-gray-300" title="Carregar imagem">
+                                <Upload className="w-3 h-3" />
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, true)} />
+                            </label>
                             <button
                                onClick={handleMagicImage}
                                disabled={isGeneratingImage || !editForm.name}
