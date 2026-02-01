@@ -1,0 +1,41 @@
+
+{
+  "name": "Entrega Local",
+  "short_name": "EntregaLocal",
+  "description": "Peça seus pratos favoritos e receba em casa com rapidez.",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#ea580c",
+  "orientation": "portrait-primary",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063822.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063822.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80",
+      "sizes": "600x600",
+      "type": "image/jpg",
+      "form_factor": "wide",
+      "label": "Cardápio delicioso"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=400&q=80",
+      "sizes": "400x600",
+      "type": "image/jpg",
+      "form_factor": "narrow",
+      "label": "Peça pelo celular"
+    }
+  ]
+}

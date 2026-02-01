@@ -254,34 +254,34 @@ const CustomerView: React.FC = () => {
     <div className="relative pb-24 max-w-7xl mx-auto">
       
       {/* Banner / Header Space */}
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">O que você quer comer hoje?</h1>
-        <p className="text-gray-500">Escolha seus pratos favoritos e receba em casa.</p>
+      <div className="mb-6 md:mb-8 text-center px-2">
+        <h1 className="text-xl md:text-4xl font-bold text-gray-900 mb-1 md:mb-2">O que você quer comer hoje?</h1>
+        <p className="text-xs md:text-base text-gray-500">Escolha seus pratos favoritos e receba em casa.</p>
       </div>
 
       {/* Active Order Status Bar */}
       {activeOrder && activeOrder.status !== OrderStatus.DELIVERED && activeOrder.status !== OrderStatus.CANCELLED && (
-        <div className="bg-white border border-gray-100 shadow-xl rounded-2xl p-6 mb-8 transform transition-all hover:scale-[1.01]">
-          <div className="flex justify-between items-center mb-4">
-             <div className="flex items-center gap-3">
-               <div className={`p-2 rounded-full text-white ${getStatusInfo(activeOrder.status).color}`}>
-                 {getStatusInfo(activeOrder.status).icon}
+        <div className="bg-white border border-gray-100 shadow-xl rounded-2xl p-4 md:p-6 mb-6 md:mb-8 transform transition-all hover:scale-[1.01] mx-2 md:mx-0">
+          <div className="flex justify-between items-center mb-3 md:mb-4">
+             <div className="flex items-center gap-2 md:gap-3">
+               <div className={`p-1.5 md:p-2 rounded-full text-white ${getStatusInfo(activeOrder.status).color}`}>
+                 {React.cloneElement(getStatusInfo(activeOrder.status).icon as React.ReactElement, { className: 'w-4 h-4 md:w-6 md:h-6' })}
                </div>
                <div>
-                 <p className="font-bold text-gray-900">Pedido #{activeOrder.id}</p>
-                 <p className="text-sm text-gray-500">{getStatusInfo(activeOrder.status).text}</p>
+                 <p className="font-bold text-sm md:text-base text-gray-900">Pedido #{activeOrder.id}</p>
+                 <p className="text-xs md:text-sm text-gray-500">{getStatusInfo(activeOrder.status).text}</p>
                </div>
              </div>
              {(activeOrder.status === OrderStatus.PENDING) && (
                 <button 
                   onClick={() => { if(window.confirm('Cancelar pedido?')) updateOrderStatus(activeOrder.id, OrderStatus.CANCELLED); }}
-                  className="text-red-500 text-sm font-bold hover:underline"
+                  className="text-red-500 text-xs md:text-sm font-bold hover:underline"
                 >
                   Cancelar
                 </button>
              )}
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-gray-100 rounded-full h-1.5 md:h-2 overflow-hidden">
             <div 
               className={`h-full transition-all duration-1000 ${getStatusInfo(activeOrder.status).color}`}
               style={{ width: activeOrder.status === OrderStatus.PENDING ? '20%' : activeOrder.status === OrderStatus.PREPARING ? '40%' : activeOrder.status === OrderStatus.READY ? '70%' : activeOrder.status === OrderStatus.DELIVERING ? '90%' : '100%' }}
@@ -291,13 +291,13 @@ const CustomerView: React.FC = () => {
       )}
 
       {/* Search & Categories */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-8 sticky top-20 z-30 bg-gray-50/95 backdrop-blur py-2">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between mb-6 md:mb-8 sticky top-16 md:top-20 z-30 bg-gray-50/95 backdrop-blur py-2 px-1">
         <div className="flex overflow-x-auto gap-2 w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm ${
+              className={`whitespace-nowrap px-4 py-2 md:px-5 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all shadow-sm ${
                 selectedCategory === cat
                   ? 'bg-orange-600 text-white shadow-orange-200'
                   : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
@@ -314,22 +314,22 @@ const CustomerView: React.FC = () => {
             placeholder="Buscar pratos..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-full border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sm"
+            className="w-full pl-9 pr-4 py-2 md:py-2.5 rounded-full border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sm"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
         {/* Menu Grid */}
-        <div className="lg:col-span-3">
+        <div className="col-span-full lg:col-span-3">
           {isLoadingMenu ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
               {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="bg-white rounded-2xl h-72 animate-pulse shadow-sm"></div>
+                <div key={i} className="bg-white rounded-xl md:rounded-2xl h-48 md:h-72 animate-pulse shadow-sm"></div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
               {filteredMenu.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                    <p className="text-gray-400 text-lg">Nenhum item encontrado.</p>
@@ -340,38 +340,38 @@ const CustomerView: React.FC = () => {
                   return (
                     <div 
                       key={item.id} 
-                      className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col"
+                      className="group bg-white rounded-xl md:rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col"
                     >
-                      <div className="relative h-48 overflow-hidden cursor-pointer" onClick={() => setViewProduct(item)}>
+                      <div className="relative h-32 md:h-48 overflow-hidden cursor-pointer" onClick={() => setViewProduct(item)}>
                         <img 
                           src={item.imageUrl} 
                           alt={item.name} 
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
+                        <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/90 backdrop-blur px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs font-bold shadow-sm">
                           {item.category}
                         </div>
                       </div>
-                      <div className="p-4 flex flex-col flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-orange-600 transition-colors cursor-pointer" onClick={() => setViewProduct(item)}>
+                      <div className="p-3 md:p-4 flex flex-col flex-1">
+                        <div className="flex justify-between items-start mb-1 md:mb-2">
+                          <h3 className="font-bold text-gray-900 text-sm md:text-lg leading-tight group-hover:text-orange-600 transition-colors cursor-pointer line-clamp-2" onClick={() => setViewProduct(item)}>
                             {item.name}
                           </h3>
                         </div>
-                        <div className="flex items-center gap-1 mb-3">
-                           <StarRating rating={average} />
-                           <span className="text-xs text-gray-400 ml-1">({count})</span>
+                        <div className="flex items-center gap-1 mb-2 md:mb-3">
+                           <StarRating rating={average} size="w-2.5 h-2.5 md:w-3 md:h-3" />
+                           <span className="text-[10px] md:text-xs text-gray-400 ml-1">({count})</span>
                         </div>
-                        <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1 cursor-pointer" onClick={() => setViewProduct(item)}>
+                        <p className="text-gray-500 text-xs md:text-sm line-clamp-2 mb-2 md:mb-4 flex-1 cursor-pointer" onClick={() => setViewProduct(item)}>
                           {item.description}
                         </p>
-                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
-                          <span className="text-xl font-bold text-green-700">R$ {item.price.toFixed(2)}</span>
+                        <div className="flex items-center justify-between mt-auto pt-2 md:pt-4 border-t border-gray-50">
+                          <span className="text-sm md:text-xl font-bold text-green-700">R$ {item.price.toFixed(2)}</span>
                           <button
                             onClick={() => addToCart(item)}
-                            className="bg-gray-900 text-white p-2.5 rounded-full hover:bg-orange-600 transition-colors shadow-lg shadow-gray-200 active:scale-90"
+                            className="bg-gray-900 text-white p-1.5 md:p-2.5 rounded-full hover:bg-orange-600 transition-colors shadow-lg shadow-gray-200 active:scale-90"
                           >
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4 md:w-5 md:h-5" />
                           </button>
                         </div>
                       </div>
@@ -456,17 +456,19 @@ const CustomerView: React.FC = () => {
                           value={cep}
                           onChange={e => setCep(e.target.value)}
                           onBlur={handleCepBlur}
-                          className="w-24 px-3 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                          className="w-28 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                         />
-                        <button
-                            type="button"
-                            onClick={handleUseLocation}
-                            disabled={isLoadingCep}
-                            className="p-3 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors"
-                            title="Usar localização atual"
-                        >
-                            {isLoadingCep ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
-                        </button>
+                        {isLoadingCep && <div className="absolute left-20 top-3"><Loader2 className="w-4 h-4 animate-spin text-orange-500"/></div>}
+                        {(!isLoadingCep && !address) && (
+                          <button
+                              type="button"
+                              onClick={handleUseLocation}
+                              className="p-3 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors"
+                              title="Usar localização atual"
+                          >
+                              <MapPin className="w-5 h-5" />
+                          </button>
+                        )}
                         <input 
                           required 
                           type="text" 

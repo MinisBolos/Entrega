@@ -1,10 +1,37 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
-import { ShoppingBag, Truck, ChefHat, LogOut, Lock } from 'lucide-react';
+import { ShoppingBag, Truck, ChefHat, LogOut, Lock, Download } from 'lucide-react';
+import InstallPwaBanner from './InstallPwaBanner';
 
 const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> = ({ children, onLoginClick }) => {
   const { role, setRole, cart, isAdminLoggedIn, logoutAdmin, toggleCart } = useApp();
+  
+  // Install Logic
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallButton(false);
+    }
+  };
 
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -15,7 +42,7 @@ const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> 
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-white shadow-sm sticky top-0 z-50 pt-safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
@@ -30,7 +57,17 @@ const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> 
             </div>
             
             {/* Header Actions */}
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              {/* Install Button in Header (Desktop/Top) */}
+              {showInstallButton && role === UserRole.CUSTOMER && (
+                <button
+                  onClick={handleInstallClick}
+                  className="hidden md:flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-full text-xs font-bold hover:bg-gray-800 transition-colors animate-pulse"
+                >
+                  <Download className="w-4 h-4" /> Instalar App
+                </button>
+              )}
+
               {role === UserRole.CUSTOMER && (
                 <button 
                   onClick={toggleCart}
@@ -62,7 +99,7 @@ const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> 
         {children}
       </main>
 
-      <footer className="bg-white border-t border-gray-200 mt-auto">
+      <footer className="bg-white border-t border-gray-200 mt-auto pb-safe-bottom">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-center text-sm text-gray-500">
             &copy; 2024 EntregaLocal AI. Powered by Google Gemini.
@@ -80,6 +117,14 @@ const Layout: React.FC<{ children: React.ReactNode, onLoginClick: () => void }> 
           </div>
         </div>
       </footer>
+      
+      {/* PWA Banner for Mobile */}
+      {role === UserRole.CUSTOMER && (
+        <InstallPwaBanner 
+          deferredPrompt={deferredPrompt} 
+          onInstall={handleInstallClick} 
+        />
+      )}
     </div>
   );
 };
