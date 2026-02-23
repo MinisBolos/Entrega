@@ -151,6 +151,16 @@ const DriverMap: React.FC<{ activeOrders: Order[], driverLocation: LatLng }> = (
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(mapInstanceRef.current);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+        routeLineRef.current = null;
+        markersRef.current = [];
+      }
+    };
   }, []);
 
   // Update map markers and route
